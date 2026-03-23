@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/core/widgets/animated_icons.dart';
 
 class AnimatedEmptyState extends StatelessWidget {
   final String lottieAsset;
@@ -20,6 +20,31 @@ class AnimatedEmptyState extends StatelessWidget {
     this.fallbackColor,
   });
 
+  Widget _buildAnimatedIcon() {
+    final c = fallbackColor ?? AppColors.primary;
+    final s = width * 0.65;
+
+    // Map lottie asset names to pure Flutter animated icons
+    final lower = lottieAsset.toLowerCase();
+    if (lower.contains('heart') || lower.contains('like') || lower.contains('match')) {
+      return AnimatedHeartIcon(size: s, color: c);
+    } else if (lower.contains('search') || lower.contains('discover') || lower.contains('no_user')) {
+      return AnimatedSearchIcon(size: s, color: c);
+    } else if (lower.contains('location') || lower.contains('map') || lower.contains('pin')) {
+      return AnimatedLocationIcon(size: s, color: c);
+    } else if (lower.contains('chat') || lower.contains('message') || lower.contains('inbox')) {
+      return AnimatedChatIcon(size: s, color: c);
+    } else if (lower.contains('check') || lower.contains('success') || lower.contains('done')) {
+      return AnimatedCheckIcon(size: s, color: c);
+    } else if (lower.contains('bell') || lower.contains('notif')) {
+      return AnimatedBellIcon(size: s, color: c);
+    } else if (lower.contains('star') || lower.contains('sparkle') || lower.contains('premium')) {
+      return AnimatedSparkleIcon(size: s, color: c);
+    }
+    // Default: pulsing heart
+    return AnimatedHeartIcon(size: s, color: c);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -30,27 +55,7 @@ class AnimatedEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Lottie.asset(
-              lottieAsset,
-              width: width,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                // Return a beautiful fallback icon if lottie asset fails to load
-                return Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: (fallbackColor ?? AppColors.primary).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    fallbackIcon ?? Icons.inbox_rounded,
-                    size: 60,
-                    color: fallbackColor ?? AppColors.primary,
-                  ),
-                );
-              },
-            ),
+            _buildAnimatedIcon(),
             const SizedBox(height: 24),
             Text(
               title,

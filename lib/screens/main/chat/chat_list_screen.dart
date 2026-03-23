@@ -177,6 +177,27 @@ class ChatListScreen extends GetView<ChatController> {
                     controller.conversations.isEmpty) {
                   return const LoadingWidget();
                 }
+                if (controller.hasError.value && controller.conversations.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text('Could not load chats', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
+                        const SizedBox(height: 8),
+                        Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: secondaryColor)),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: controller.fetchConversations,
+                          icon: const Icon(LucideIcons.refreshCw, size: 16),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 if (controller.conversations.isEmpty) {
                   return AnimatedEmptyState(
                     lottieAsset: 'assets/animations/no_chat.json',

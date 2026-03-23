@@ -79,6 +79,27 @@ class UsersScreen extends GetView<UsersController> {
                 if (controller.isLoading.value && controller.allUsers.isEmpty) {
                   return const LoadingWidget();
                 }
+                if (controller.hasError.value && controller.allUsers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text('Could not load users', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
+                        const SizedBox(height: 8),
+                        Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => controller.fetchUsers(refresh: true),
+                          icon: const Icon(LucideIcons.refreshCw, size: 16),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 final users = controller.filteredUsers;
                 if (users.isEmpty) {
                   return const AnimatedEmptyState(

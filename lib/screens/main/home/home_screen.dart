@@ -16,25 +16,93 @@ class HomeScreen extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      if (!controller.locationGranted.value) {
-        return Scaffold(body: _EnableLocationWidget(onRefresh: controller.fetchDiscoverUsers));
-      }
-      if (controller.isLoading.value && controller.discoverUsers.isEmpty) {
-        return const SearchRadarScreen();
-      }
-      if (controller.discoverUsers.isEmpty) {
-        return Scaffold(
-          body: const AnimatedEmptyState(
-            lottieAsset: 'assets/animations/location.json',
-            title: 'No new souls found',
-            subtitle: 'Try expanding your filters or check back later.',
-            fallbackIcon: LucideIcons.search,
+    final topPad = MediaQuery.of(context).padding.top;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // ── State-dependent content ──
+          Obx(() {
+            if (!controller.locationGranted.value) {
+              return _EnableLocationWidget(onRefresh: controller.requestLocationAndFetch);
+            }
+            if (controller.isLoading.value && controller.discoverUsers.isEmpty) {
+              return const SearchRadarScreen();
+            }
+            if (controller.hasError.value && controller.discoverUsers.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    const Text('Could not load profiles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                    const SizedBox(height: 8),
+                    Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: controller.fetchDiscoverUsers,
+                      icon: const Icon(LucideIcons.refreshCw, size: 16),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    ),
+                  ],
+                ),
+              );
+            }
+            if (controller.discoverUsers.isEmpty) {
+              return const AnimatedEmptyState(
+                lottieAsset: 'assets/animations/location.json',
+                title: 'No new souls found',
+                subtitle: 'Try expanding your filters or check back later.',
+                fallbackIcon: LucideIcons.search,
+              );
+            }
+            return _CardStackScreen(controller: controller);
+          }),
+
+          // ── Persistent top-left: user avatar ──
+          Positioned(
+            top: topPad + 12,
+            left: 16,
+            child: Obx(() => controller.discoverUsers.isNotEmpty
+                ? const SizedBox.shrink() // CardStackScreen draws its own
+                : _MiniAvatarHeader(
+                    user: controller.currentUser,
+                    onTap: () => Get.toNamed(AppRoutes.settings),
+                  )),
           ),
-        );
-      }
-      return _CardStackScreen(controller: controller);
-    });
+
+          // ── Persistent top-right: notif + search + filter ──
+          Positioned(
+            top: topPad + 12,
+            right: 16,
+            child: Obx(() => controller.discoverUsers.isNotEmpty
+                ? const SizedBox.shrink() // CardStackScreen draws its own
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _GlassCircleBtn(
+                        icon: LucideIcons.bell,
+                        onTap: controller.openNotifications,
+                      ),
+                      const SizedBox(height: 12),
+                      _GlassCircleBtn(
+                        icon: LucideIcons.search,
+                        onTap: () => Get.toNamed(AppRoutes.search),
+                      ),
+                      const SizedBox(height: 12),
+                      _GlassCircleBtn(
+                        icon: LucideIcons.sliders,
+                        onTap: controller.openFilter,
+                      ),
+                    ],
+                  )),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -52,9 +120,9 @@ class _EnableLocationWidget extends StatelessWidget {
           children: [
             const Icon(LucideIcons.mapPinOff, size: 64, color: AppColors.primary),
             const SizedBox(height: 16),
-            const Text('Location Required', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text('Location Required', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 8),
-            const Text('Please enable location services so we can find people near you.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+            Text('Please enable location services so we can find people near you.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade400)),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: onRefresh,
@@ -240,9 +308,7 @@ class _CardStackScreenState extends State<_CardStackScreen>
     final topPad = MediaQuery.of(context).padding.top;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Obx(() {
+    return Obx(() {
         final users = widget.controller.discoverUsers;
         if (users.isEmpty) {
           return const AnimatedEmptyState(
@@ -376,8 +442,7 @@ class _CardStackScreenState extends State<_CardStackScreen>
             );
           },
         );
-      }),
-    );
+      });
   }
 
   Widget _buildCardContent(UserModel user, BuildContext context) {

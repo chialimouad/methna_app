@@ -104,29 +104,85 @@ class SearchRadarScreen extends StatelessWidget {
             ),
           ),
 
-          // ── Scattered map marker pins ──
-          Positioned(
-            top: 60,
-            right: 40,
-            child: Icon(LucideIcons.mapPin,
-                size: 24,
-                color: AppColors.primaryDark.withValues(alpha: 0.6)),
-          ),
-          Positioned(
-            top: 120,
-            right: 80,
-            child: Icon(LucideIcons.mapPin,
-                size: 20,
-                color: AppColors.primaryDark.withValues(alpha: 0.5)),
-          ),
-          Positioned(
-            bottom: 180,
-            left: 30,
-            child: Icon(LucideIcons.mapPin,
-                size: 22,
-                color: AppColors.primaryDark.withValues(alpha: 0.5)),
-          ),
+          // ── Scattered animated map marker pins ──
+          _AnimatedMapPin(top: 60, right: 40, size: 24, delay: 0.0),
+          _AnimatedMapPin(top: 120, right: 80, size: 20, delay: 0.3),
+          _AnimatedMapPin(bottom: 180, left: 30, size: 22, delay: 0.6),
+          _AnimatedMapPin(top: 200, left: 60, size: 18, delay: 0.9),
+          _AnimatedMapPin(bottom: 260, right: 50, size: 20, delay: 1.2),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Animated map pin with bounce + pulse ─────────────────────────────────
+class _AnimatedMapPin extends StatefulWidget {
+  final double? top, bottom, left, right;
+  final double size;
+  final double delay;
+
+  const _AnimatedMapPin({
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.size,
+    this.delay = 0.0,
+  });
+
+  @override
+  State<_AnimatedMapPin> createState() => _AnimatedMapPinState();
+}
+
+class _AnimatedMapPinState extends State<_AnimatedMapPin>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    Future.delayed(Duration(milliseconds: (widget.delay * 1000).toInt()), () {
+      if (mounted) _ctrl.repeat(reverse: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: widget.top,
+      bottom: widget.bottom,
+      left: widget.left,
+      right: widget.right,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) {
+          final t = _ctrl.value;
+          final bounce = -6.0 * t;
+          final opacity = 0.35 + 0.35 * t;
+          final scale = 0.9 + 0.15 * t;
+          return Transform.translate(
+            offset: Offset(0, bounce),
+            child: Transform.scale(
+              scale: scale,
+              child: Icon(
+                LucideIcons.mapPin,
+                size: widget.size,
+                color: AppColors.primaryDark.withValues(alpha: opacity),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

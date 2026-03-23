@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:lottie/lottie.dart';
+import 'package:methna_app/core/widgets/animated_icons.dart';
 
 class Helpers {
   Helpers._();
@@ -181,23 +181,11 @@ class Helpers {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Lottie Animation Container
+              // Animated Icon Container
               SizedBox(
                 height: 120,
                 width: 120,
-                child: Lottie.asset(
-                  lottieAsset,
-                  fit: BoxFit.contain,
-                  repeat: false,
-                  errorBuilder: (context, error, stackTrace) {
-                    // Fallback to Icon if Lottie fails to load
-                    return const Icon(
-                      LucideIcons.info,
-                      size: 60,
-                      color: Colors.grey,
-                    );
-                  },
-                ),
+                child: _buildDialogIcon(lottieAsset),
               ),
               const SizedBox(height: 20),
               
@@ -308,6 +296,29 @@ class Helpers {
       ),
       barrierDismissible: barrierDismissible,
     );
+  }
+
+  /// Build animated icon for dialog based on asset name
+  static Widget _buildDialogIcon(String assetName) {
+    final lower = assetName.toLowerCase();
+    if (lower.contains('success') || lower.contains('check') || lower.contains('done')) {
+      return const AnimatedCheckIcon(size: 120, color: Color(0xFF4CAF50));
+    } else if (lower.contains('error') || lower.contains('fail') || lower.contains('warning')) {
+      return const AnimatedErrorIcon(size: 120, color: Color(0xFFFF5252));
+    } else if (lower.contains('heart') || lower.contains('like') || lower.contains('match')) {
+      return const AnimatedHeartIcon(size: 120);
+    } else if (lower.contains('search') || lower.contains('discover')) {
+      return const AnimatedSearchIcon(size: 120);
+    } else if (lower.contains('location') || lower.contains('map')) {
+      return const AnimatedLocationIcon(size: 120);
+    } else if (lower.contains('chat') || lower.contains('message')) {
+      return const AnimatedChatIcon(size: 120);
+    } else if (lower.contains('bell') || lower.contains('notif')) {
+      return const AnimatedBellIcon(size: 120);
+    } else if (lower.contains('star') || lower.contains('sparkle')) {
+      return const AnimatedSparkleIcon(size: 120);
+    }
+    return const AnimatedCheckIcon(size: 120);
   }
 
   /// Truncate string

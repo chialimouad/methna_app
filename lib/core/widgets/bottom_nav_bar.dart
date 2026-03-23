@@ -151,7 +151,21 @@ class AppBottomNavBar extends GetView<NavigationController> {
                                         alignment: Alignment.center,
                                         clipBehavior: Clip.none,
                                         children: [
-                                          Icon(tab.icon, color: Colors.white, size: 28),
+                                          TweenAnimationBuilder<double>(
+                                            tween: Tween(begin: 0.0, end: 1.0),
+                                            duration: const Duration(milliseconds: 400),
+                                            curve: Curves.elasticOut,
+                                            builder: (context, value, child) {
+                                              return Transform.scale(
+                                                scale: 0.5 + 0.5 * value,
+                                                child: Transform.rotate(
+                                                  angle: (1.0 - value) * 0.3,
+                                                  child: child,
+                                                ),
+                                              );
+                                            },
+                                            child: Icon(tab.icon, color: Colors.white, size: 28),
+                                          ),
                                           if (hasBadge)
                                             Positioned(
                                               top: 8,

@@ -24,6 +24,7 @@ class ChatController extends GetxController {
   final RxList<ConversationModel> conversations = <ConversationModel>[].obs;
   final RxList<UserModel> onlineTodayUsers = <UserModel>[].obs;
   final RxBool isLoading = false.obs;
+  final RxBool hasError = false.obs;
   final RxString searchQuery = ''.obs;
 
   // Active chat state
@@ -135,6 +136,7 @@ class ChatController extends GetxController {
   // ─── Conversations ─────────────────────────────────────────────
   Future<void> fetchConversations() async {
     isLoading.value = true;
+    hasError.value = false;
     try {
       final response = await _api.get(ApiConstants.conversations);
       final list = response.data is List ? response.data : response.data['conversations'] ?? [];
@@ -148,7 +150,9 @@ class ChatController extends GetxController {
           .where((c) => c.otherUser?.isOnline == true)
           .map((c) => c.otherUser!)
           .toList();
-    } catch (_) {}
+    } catch (_) {
+      hasError.value = true;
+    }
     finally {
       isLoading.value = false;
     }

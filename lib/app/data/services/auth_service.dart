@@ -46,16 +46,20 @@ class AuthService extends GetxService {
     String? username,
     String? phone,
   }) async {
-    final response = await _api.post(ApiConstants.register, data: {
+    final body = <String, dynamic>{
       'email': email,
       'password': password,
       'confirmPassword': confirmPassword,
       'firstName': firstName,
       'lastName': lastName,
-      'username': ?username,
-      'phone': ?phone,
-    });
-    return response.data;
+    };
+    if (username != null && username.isNotEmpty) body['username'] = username;
+    if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+
+    final response = await _api.post(ApiConstants.register, data: body);
+    return response.data is Map<String, dynamic>
+        ? response.data as Map<String, dynamic>
+        : <String, dynamic>{};
   }
 
   // ─── Forgot Password ──────────────────────────────────────

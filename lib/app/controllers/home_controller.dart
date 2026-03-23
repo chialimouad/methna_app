@@ -20,6 +20,7 @@ class HomeController extends GetxController {
   final RxList<UserModel> discoverUsers = <UserModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isEmpty = false.obs;
+  final RxBool hasError = false.obs;
   final RxInt currentCardIndex = 0.obs;
   final RxBool locationGranted = true.obs;
 
@@ -60,8 +61,19 @@ class HomeController extends GetxController {
     await _storage.saveString('filter_gender', genderFilter.value);
   }
 
+  /// Called from the "Enable Location" button — requests permission with
+  /// user feedback dialogs, then fetches discover users.
+  Future<void> requestLocationAndFetch() async {
+    final position = await _location.requestLocationWithFeedback();
+    if (position != null) {
+      locationGranted.value = true;
+      fetchDiscoverUsers();
+    }
+  }
+
   Future<void> fetchDiscoverUsers() async {
     isLoading.value = true;
+    hasError.value = false;
     final hasPerm = await _location.checkPermission();
     locationGranted.value = hasPerm;
     
@@ -88,6 +100,7 @@ class HomeController extends GetxController {
       isEmpty.value = discoverUsers.isEmpty;
       currentCardIndex.value = 0;
     } catch (e) {
+      hasError.value = true;
       isEmpty.value = true;
     } finally {
       isLoading.value = false;

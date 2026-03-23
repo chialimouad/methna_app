@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:methna_app/app/controllers/profile_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
-import 'package:methna_app/core/widgets/loading_widget.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class ProfileScreen extends GetView<ProfileController> {
@@ -26,7 +25,31 @@ class ProfileScreen extends GetView<ProfileController> {
       body: SafeArea(
         child: Obx(() {
           final user = controller.user.value;
-          if (user == null) return const LoadingWidget();
+          if (user == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(LucideIcons.userCircle, size: 64, color: secondaryColor),
+                  const SizedBox(height: 16),
+                  Text('Could not load profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
+                  const SizedBox(height: 8),
+                  Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: secondaryColor)),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: controller.refreshProfile,
+                    icon: const Icon(LucideIcons.refreshCw, size: 16),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
 
           return ListView(
             padding: EdgeInsets.zero,

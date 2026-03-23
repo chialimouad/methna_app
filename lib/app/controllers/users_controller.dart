@@ -14,6 +14,7 @@ class UsersController extends GetxController {
   final RxList<UserModel> verifiedUsers = <UserModel>[].obs;
 
   final RxBool isLoading = false.obs;
+  final RxBool hasError = false.obs;
   final RxString selectedCategory = 'all'.obs;
   final RxInt page = 1.obs;
   final RxBool hasMore = true.obs;
@@ -34,6 +35,7 @@ class UsersController extends GetxController {
     if (!hasMore.value && !refresh) return;
 
     isLoading.value = true;
+    hasError.value = false;
     try {
       final response = await _api.get(ApiConstants.discoverCategories, queryParameters: {
         'page': page.value,
@@ -57,7 +59,7 @@ class UsersController extends GetxController {
       hasMore.value = users.length >= 20;
       page.value++;
     } catch (e) {
-      // silently fail
+      hasError.value = true;
     } finally {
       isLoading.value = false;
     }
