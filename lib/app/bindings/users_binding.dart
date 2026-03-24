@@ -4,6 +4,6 @@ import 'package:methna_app/app/controllers/users_controller.dart';
 class UsersBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => UsersController());
+    Get.put(UsersController());
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:methna_app/app/data/services/api_service.dart';
@@ -21,6 +22,11 @@ class ProfileController extends GetxController {
     super.onInit();
     user.value = _auth.currentUser.value;
     _auth.currentUser.listen((u) => user.value = u);
+    // If user is null at init time, fetch it
+    if (user.value == null) {
+      debugPrint('[ProfileController] user is null at init, fetching...');
+      refreshProfile();
+    }
   }
 
   Future<void> refreshProfile() async {
@@ -28,7 +34,9 @@ class ProfileController extends GetxController {
     try {
       await _auth.fetchMe();
       user.value = _auth.currentUser.value;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ProfileController] refreshProfile error: $e');
+    }
     finally {
       isLoading.value = false;
     }

@@ -56,6 +56,18 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  int _calcAge(String dob) {
+    try {
+      final birth = DateTime.parse(dob);
+      final now = DateTime.now();
+      int age = now.year - birth.year;
+      if (now.month < birth.month || (now.month == birth.month && now.day < birth.day)) age--;
+      return age;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<void> _performSearch(String q) async {
     isLoading.value = true;
     hasSearched.value = true;
@@ -66,19 +78,32 @@ class _SearchScreenState extends State<SearchScreen> {
         'limit': 20,
       });
       final data = response.data;
-      final list = data is Map ? (data['results'] ?? []) : (data is List ? data : []);
+      final list = data is Map ? (data['users'] ?? data['results'] ?? []) : (data is List ? data : []);
       results.value = (list as List).map((item) {
         if (item is Map<String, dynamic>) {
+          // Extract photo: from photos array (enriched format) or flat 'photo' field
+          String? photoUrl = item['photo'];
+          if (photoUrl == null && item['photos'] is List && (item['photos'] as List).isNotEmpty) {
+            final mainPhoto = (item['photos'] as List).firstWhere(
+              (p) => p['isMain'] == true,
+              orElse: () => (item['photos'] as List).first,
+            );
+            photoUrl = mainPhoto['url'];
+          }
+          // Extract profile fields (may be nested or flat)
+          final profile = item['profile'] is Map ? item['profile'] as Map<String, dynamic> : null;
           return _SearchResult(
-            userId: item['userId'] ?? item['id'] ?? '',
+            userId: item['id'] ?? item['userId'] ?? '',
             firstName: item['firstName'] ?? '',
             lastName: item['lastName'] ?? '',
-            age: item['age'] ?? 0,
-            city: item['city'] ?? '',
-            country: item['country'] ?? '',
-            photo: item['photo'] ?? item['mainPhotoUrl'],
-            bio: item['bio'],
-            interests: item['interests'] != null ? List<String>.from(item['interests']) : [],
+            age: item['age'] ?? (profile?['dateOfBirth'] != null ? _calcAge(profile!['dateOfBirth']) : 0),
+            city: profile?['city'] ?? item['city'] ?? '',
+            country: profile?['country'] ?? item['country'] ?? '',
+            photo: photoUrl,
+            bio: profile?['bio'] ?? item['bio'],
+            interests: (profile?['interests'] ?? item['interests']) != null
+                ? List<String>.from(profile?['interests'] ?? item['interests'])
+                : [],
           );
         }
         return null;

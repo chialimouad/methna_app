@@ -6,6 +6,7 @@ import 'package:methna_app/app/data/services/auth_service.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/core/widgets/ice_breaker_suggestions.dart';
 
 class ChatDetailScreen extends GetView<ChatController> {
   const ChatDetailScreen({super.key});
@@ -118,23 +119,32 @@ class ChatDetailScreen extends GetView<ChatController> {
                         child: CircularProgressIndicator());
                   }
                   if (controller.activeMessages.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(LucideIcons.messageSquare,
-                              size: 48, color: secondaryColor),
-                          const SizedBox(height: 12),
-                          Text(
-                            'say_hello'.tr,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: secondaryColor,
-                            ),
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.messageSquare,
+                            size: 48, color: secondaryColor),
+                        const SizedBox(height: 12),
+                        Text(
+                          'say_hello'.tr,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: secondaryColor,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Ice breaker suggestions
+                        Obx(() => controller.iceBreakers.isNotEmpty
+                          ? IceBreakerSuggestions(
+                              suggestions: controller.iceBreakers.toList(),
+                              onSelect: (text) {
+                                controller.sendIceBreaker(text);
+                              },
+                            )
+                          : const SizedBox.shrink(),
+                        ),
+                      ],
                     );
                   }
 

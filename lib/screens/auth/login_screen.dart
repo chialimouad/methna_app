@@ -138,16 +138,22 @@ class LoginScreen extends GetView<LoginController> {
                                   TextStyle(color: hintColor, fontSize: 15),
                               prefixIcon: Icon(LucideIcons.lock,
                                   size: 20, color: hintColor),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  controller.obscurePassword.value
-                                      ? LucideIcons.eyeOff
-                                      : LucideIcons.eye,
-                                  size: 20,
-                                  color: hintColor,
+                              suffixIcon: GestureDetector(
+                                onTap: controller.togglePasswordVisibility,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Icon(
+                                    controller.obscurePassword.value
+                                        ? LucideIcons.eyeOff
+                                        : LucideIcons.eye,
+                                    size: 20,
+                                    color: hintColor,
+                                  ),
                                 ),
-                                onPressed:
-                                    controller.togglePasswordVisibility,
+                              ),
+                              suffixIconConstraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 16),

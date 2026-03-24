@@ -9,6 +9,8 @@ class AnimatedEmptyState extends StatelessWidget {
   final double width;
   final IconData? fallbackIcon;
   final Color? fallbackColor;
+  final Color? titleColor;
+  final Color? subtitleColor;
 
   const AnimatedEmptyState({
     super.key,
@@ -18,6 +20,8 @@ class AnimatedEmptyState extends StatelessWidget {
     this.width = 200,
     this.fallbackIcon,
     this.fallbackColor,
+    this.titleColor,
+    this.subtitleColor,
   });
 
   Widget _buildAnimatedIcon() {
@@ -63,7 +67,7 @@ class AnimatedEmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: titleColor ?? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
               ),
             ),
             const SizedBox(height: 12),
@@ -72,7 +76,7 @@ class AnimatedEmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: subtitleColor ?? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                 height: 1.5,
               ),
             ),

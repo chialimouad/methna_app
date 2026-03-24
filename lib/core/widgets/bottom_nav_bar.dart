@@ -22,12 +22,12 @@ class AppBottomNavBar extends GetView<NavigationController> {
 
   @override
   Widget build(BuildContext context) {
-    final chatCtrl = Get.find<ChatController>();
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Obx(() {
       final selected = controller.currentIndex.value;
+      final chatCtrl = Get.isRegistered<ChatController>() ? Get.find<ChatController>() : null;
 
       return Padding(
         padding: EdgeInsets.fromLTRB(20, 0, 20, bottomPad > 0 ? bottomPad + 4 : 20),
@@ -78,7 +78,7 @@ class AppBottomNavBar extends GetView<NavigationController> {
                   children: List.generate(_tabs.length, (i) {
                     final isActive = selected == i;
                     final tab = _tabs[i];
-                    final hasBadge = i == 2 && chatCtrl.totalUnread > 0;
+                    final hasBadge = i == 2 && (chatCtrl?.totalUnread ?? 0) > 0;
 
                     return Expanded(
                       child: GestureDetector(

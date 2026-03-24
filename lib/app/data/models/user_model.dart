@@ -125,6 +125,7 @@ class ProfileModel {
   final String? marriageIntention;
   final String? maritalStatus;
   final String? secondWifePreference;
+  final String? intentMode;
 
   // Education & Career
   final String? education;
@@ -201,6 +202,7 @@ class ProfileModel {
     this.marriageIntention,
     this.maritalStatus,
     this.secondWifePreference,
+    this.intentMode,
     this.education,
     this.educationDetails,
     this.jobTitle,
@@ -261,6 +263,7 @@ class ProfileModel {
       marriageIntention: json['marriageIntention'],
       maritalStatus: json['maritalStatus'],
       secondWifePreference: json['secondWifePreference'],
+      intentMode: json['intentMode'],
       education: json['education'],
       educationDetails: json['educationDetails'],
       jobTitle: json['jobTitle'],
@@ -321,6 +324,7 @@ class ProfileModel {
     if (marriageIntention != null) map['marriageIntention'] = marriageIntention;
     if (maritalStatus != null) map['maritalStatus'] = maritalStatus;
     if (secondWifePreference != null) map['secondWifePreference'] = secondWifePreference;
+    if (intentMode != null) map['intentMode'] = intentMode;
     if (education != null) map['education'] = education;
     if (educationDetails != null) map['educationDetails'] = educationDetails;
     if (jobTitle != null) map['jobTitle'] = jobTitle;

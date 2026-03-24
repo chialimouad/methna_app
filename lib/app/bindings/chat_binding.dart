@@ -4,6 +4,6 @@ import 'package:methna_app/app/controllers/chat_controller.dart';
 class ChatBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => ChatController());
+    Get.put(ChatController());
   }
 }

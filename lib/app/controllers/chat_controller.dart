@@ -33,6 +33,9 @@ class ChatController extends GetxController {
   final RxBool isTyping = false.obs;
   final RxBool messagesLoading = false.obs;
 
+  // Ice breaker suggestions
+  final RxList<String> iceBreakers = <String>[].obs;
+
   // Read receipts: maps messageId → read status
   final RxMap<String, bool> readReceipts = <String, bool>{}.obs;
 
@@ -150,8 +153,9 @@ class ChatController extends GetxController {
           .where((c) => c.otherUser?.isOnline == true)
           .map((c) => c.otherUser!)
           .toList();
-    } catch (_) {
+    } catch (e) {
       hasError.value = true;
+      debugPrint('[ChatController] fetchConversations error: $e');
     }
     finally {
       isLoading.value = false;
@@ -161,9 +165,28 @@ class ChatController extends GetxController {
   Future<void> openConversation(ConversationModel conversation) async {
     activeConversation.value = conversation;
     activeMessages.clear();
+    iceBreakers.clear();
     _socket.joinConversation(conversation.id);
     Get.toNamed(AppRoutes.chatDetail, arguments: {'conversation': conversation});
     await fetchMessages(conversation.id);
+    // Fetch ice breakers if no messages yet
+    if (activeMessages.isEmpty && conversation.otherUser != null) {
+      _fetchIceBreakers(conversation.otherUser!.id);
+    }
+  }
+
+  Future<void> _fetchIceBreakers(String targetUserId) async {
+    try {
+      final response = await _api.get(ApiConstants.iceBreakers(targetUserId));
+      if (response.data is List) {
+        iceBreakers.value = List<String>.from(response.data);
+      }
+    } catch (_) {}
+  }
+
+  void sendIceBreaker(String text) {
+    sendMessage(text);
+    iceBreakers.clear();
   }
 
   Future<void> fetchMessages(String conversationId, {int page = 1}) async {
@@ -181,7 +204,9 @@ class ChatController extends GetxController {
         activeMessages.addAll(msgs);
       }
       _socket.markAsRead(conversationId);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ChatController] fetchMessages error: $e');
+    }
     finally {
       messagesLoading.value = false;
     }

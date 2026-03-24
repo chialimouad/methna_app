@@ -10,6 +10,9 @@ import 'package:methna_app/screens/search/search_radar_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/core/widgets/animated_empty_state.dart';
+import 'package:methna_app/core/widgets/baraka_meter.dart';
+import 'package:methna_app/core/widgets/intent_badge.dart';
+import 'package:methna_app/core/widgets/daily_insight_card.dart';
 
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
@@ -52,11 +55,13 @@ class HomeScreen extends GetView<HomeController> {
               );
             }
             if (controller.discoverUsers.isEmpty) {
-              return const AnimatedEmptyState(
+              return AnimatedEmptyState(
                 lottieAsset: 'assets/animations/location.json',
                 title: 'No new souls found',
                 subtitle: 'Try expanding your filters or check back later.',
                 fallbackIcon: LucideIcons.search,
+                titleColor: Colors.white,
+                subtitleColor: Colors.grey.shade400,
               );
             }
             return _CardStackScreen(controller: controller);
@@ -379,6 +384,27 @@ class _CardStackScreenState extends State<_CardStackScreen>
                               alignment: Alignment.topRight,
                             ),
 
+                          // ── Baraka Meter + Intent Badge overlay ──
+                          Positioned(
+                            left: 14,
+                            bottom: 140,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Obx(() => BarakaMeter(
+                                  score: widget.controller.getBarakaScore(user.id),
+                                  level: widget.controller.getBarakaLevel(user.id),
+                                  compact: true,
+                                )),
+                                const SizedBox(height: 6),
+                                if (user.profile?.intentMode != null)
+                                  IntentBadge(
+                                    intentMode: user.profile!.intentMode!,
+                                    compact: true,
+                                  ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -420,6 +446,24 @@ class _CardStackScreenState extends State<_CardStackScreen>
                       ),
                     ],
                   ),
+                ),
+
+                // ── Daily Insight overlay ──
+                Positioned(
+                  top: topPad + 70,
+                  left: 0,
+                  right: 0,
+                  child: Obx(() {
+                    if (widget.controller.dailyInsightDismissed.value ||
+                        widget.controller.dailyInsightContent.value.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return DailyInsightCard(
+                      content: widget.controller.dailyInsightContent.value,
+                      author: widget.controller.dailyInsightAuthor.value,
+                      onDismiss: widget.controller.dismissDailyInsight,
+                    );
+                  }),
                 ),
 
                 // ── Bottom user info + action bar ──

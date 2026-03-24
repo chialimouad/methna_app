@@ -159,4 +159,14 @@ class ApiConstants {
   // ─── Support ──────────────────────────────────────────
   static const String supportTickets = '/support';
   static const String myTickets = '/support/my-tickets';
+
+  // ─── Baraka Meter ───────────────────────────────────
+  static String baraka(String targetId) => '/matching/baraka/$targetId';
+  static const String barakaBulk = '/matching/baraka/bulk';
+
+  // ─── Ice Breakers ───────────────────────────────────
+  static String iceBreakers(String targetId) => '/matching/ice-breakers/$targetId';
+
+  // ─── Daily Insights ─────────────────────────────────
+  static const String dailyInsight = '/daily-insights/today';
 }

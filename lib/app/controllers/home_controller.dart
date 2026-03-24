@@ -36,8 +36,22 @@ class HomeController extends GetxController {
   final RxBool goGlobalFilter = false.obs;
   final RxBool useKm = true.obs;
 
+  // Pagination
+  final RxInt _page = 1.obs;
+  final RxBool _hasMore = true.obs;
+  final RxBool _isLoadingMore = false.obs;
+  final Set<String> _seenUserIds = {};
+
   // Rewind tracking
   final Rx<UserModel?> lastSwipedUser = Rx<UserModel?>(null);
+
+  // Baraka Meter scores: userId -> {score, level}
+  final RxMap<String, Map<String, dynamic>> barakaScores = <String, Map<String, dynamic>>{}.obs;
+
+  // Daily Insight
+  final RxString dailyInsightContent = ''.obs;
+  final RxString dailyInsightAuthor = ''.obs;
+  final RxBool dailyInsightDismissed = false.obs;
 
   @override
   void onInit() {
@@ -45,6 +59,7 @@ class HomeController extends GetxController {
     _loadFilters();
     fetchDiscoverUsers();
     _monetization.fetchStatus();
+    fetchDailyInsight();
   }
 
   void _loadFilters() {
@@ -71,39 +86,81 @@ class HomeController extends GetxController {
     }
   }
 
+  Map<String, dynamic> get _filterParams => {
+    'limit': 20,
+    if (genderFilter.value != 'all') 'gender': genderFilter.value,
+    'minAge': minAge.value,
+    'maxAge': maxAge.value,
+    if (!goGlobalFilter.value) 'maxDistance': maxDistance.value.round(),
+    if (educationFilter.value.isNotEmpty) 'education': educationFilter.value,
+    if (religiousLevelFilter.value.isNotEmpty) 'religiousLevel': religiousLevelFilter.value,
+    if (interestsFilter.isNotEmpty) 'interests': interestsFilter.toList(),
+    if (verifiedOnlyFilter.value) 'verifiedOnly': true,
+  };
+
   Future<void> fetchDiscoverUsers() async {
     isLoading.value = true;
     hasError.value = false;
+    _page.value = 1;
+    _hasMore.value = true;
+    _seenUserIds.clear();
+
     final hasPerm = await _location.checkPermission();
     locationGranted.value = hasPerm;
-    
+
     if (!hasPerm) {
       isLoading.value = false;
       isEmpty.value = true;
       return;
     }
-    
+
     try {
-      final response = await _api.get(ApiConstants.search, queryParameters: {
-        'limit': 20,
-        if (genderFilter.value != 'all') 'gender': genderFilter.value,
-        'minAge': minAge.value,
-        'maxAge': maxAge.value,
-        'maxDistance': maxDistance.value.round(),
-        if (educationFilter.value.isNotEmpty) 'education': educationFilter.value,
-        if (religiousLevelFilter.value.isNotEmpty) 'religiousLevel': religiousLevelFilter.value,
-        if (interestsFilter.isNotEmpty) 'interests': interestsFilter.toList(),
-        if (verifiedOnlyFilter.value) 'verifiedOnly': true,
-      });
-      final list = response.data is List ? response.data : response.data['users'] ?? [];
-      discoverUsers.value = (list as List).map((u) => UserModel.fromJson(u)).toList();
+      final users = await _fetchPage(1);
+      discoverUsers.value = users;
+      for (final u in users) {
+        _seenUserIds.add(u.id);
+      }
       isEmpty.value = discoverUsers.isEmpty;
       currentCardIndex.value = 0;
+      // Fetch Baraka scores for loaded users
+      _fetchBulkBaraka(users.map((u) => u.id).toList());
     } catch (e) {
       hasError.value = true;
       isEmpty.value = true;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<List<UserModel>> _fetchPage(int page) async {
+    final response = await _api.get(ApiConstants.search, queryParameters: {
+      ..._filterParams,
+      'page': page,
+    });
+    final data = response.data;
+    final list = data is List
+        ? data
+        : (data['users'] ?? data['results'] ?? []);
+    final users = (list as List).map((u) => UserModel.fromJson(u)).toList();
+    // Deduplicate
+    users.removeWhere((u) => _seenUserIds.contains(u.id));
+    if (users.isEmpty) _hasMore.value = false;
+    return users;
+  }
+
+  Future<void> loadMoreUsers() async {
+    if (_isLoadingMore.value || !_hasMore.value) return;
+    _isLoadingMore.value = true;
+    try {
+      _page.value++;
+      final moreUsers = await _fetchPage(_page.value);
+      for (final u in moreUsers) {
+        _seenUserIds.add(u.id);
+      }
+      discoverUsers.addAll(moreUsers);
+    } catch (_) {}
+    finally {
+      _isLoadingMore.value = false;
     }
   }
 
@@ -169,6 +226,10 @@ class HomeController extends GetxController {
       if (discoverUsers.isEmpty) {
         isEmpty.value = true;
       }
+      // Auto-load more users when running low
+      if (discoverUsers.length < 5 && _hasMore.value) {
+        loadMoreUsers();
+      }
     }
   }
 
@@ -214,6 +275,48 @@ class HomeController extends GetxController {
       final list = response.data is List ? response.data : response.data['users'] ?? [];
       recommendedUsers.value = (list as List).map((u) => UserModel.fromJson(u)).toList();
     } catch (_) {}
+  }
+
+  // ─── Baraka Meter ───────────────────────────
+  Future<void> _fetchBulkBaraka(List<String> userIds) async {
+    if (userIds.isEmpty) return;
+    try {
+      final response = await _api.post(ApiConstants.barakaBulk, data: {
+        'targetUserIds': userIds,
+      });
+      if (response.data is Map) {
+        final map = response.data as Map<String, dynamic>;
+        for (final entry in map.entries) {
+          if (entry.value is Map) {
+            barakaScores[entry.key] = Map<String, dynamic>.from(entry.value);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  int getBarakaScore(String userId) {
+    return (barakaScores[userId]?['score'] as num?)?.toInt() ?? 0;
+  }
+
+  String getBarakaLevel(String userId) {
+    return barakaScores[userId]?['level']?.toString() ?? 'low';
+  }
+
+  // ─── Daily Insight ──────────────────────────
+  Future<void> fetchDailyInsight() async {
+    try {
+      final response = await _api.get(ApiConstants.dailyInsight);
+      final data = response.data;
+      if (data is Map) {
+        dailyInsightContent.value = data['content']?.toString() ?? '';
+        dailyInsightAuthor.value = data['author']?.toString() ?? '';
+      }
+    } catch (_) {}
+  }
+
+  void dismissDailyInsight() {
+    dailyInsightDismissed.value = true;
   }
 
   // ─── Profile View Recording ───────────────────────────

@@ -17,8 +17,9 @@ class MatchFoundScreen extends StatefulWidget {
 
 class _MatchFoundScreenState extends State<MatchFoundScreen>
     with TickerProviderStateMixin {
-  static const _pink = Color(0xFFFF2D55);
-  static const _purple = AppColors.primary;
+  static const _gold = Color(0xFFD4AF37);
+  static const _emerald = Color(0xFF2E7D32);
+  static const _cream = Color(0xFFF5E6CC);
 
   late AnimationController _entranceCtrl;
   late AnimationController _pulseCtrl;
@@ -70,41 +71,45 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
     final currentUser = Get.find<AuthService>().currentUser.value;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9F5EE),
       body: Stack(
         children: [
-          // Confetti particles
-          ..._buildConfetti(),
+          // Radiant glow background
+          _RadiantGlow(animation: _pulseCtrl),
+
+          // Light particles
+          ..._buildLightParticles(),
 
           SafeArea(
             child: Column(
               children: [
                 const Spacer(flex: 2),
 
-                // ── Animated heart icon ──
+                // ── Animated crescent + star icon ──
                 ScaleTransition(
                   scale: _scaleAnim,
                   child: AnimatedBuilder(
                     animation: _pulseCtrl,
                     builder: (ctx, _) {
-                      final s = 1.0 + _pulseCtrl.value * 0.08;
+                      final s = 1.0 + _pulseCtrl.value * 0.06;
                       return Transform.scale(
                         scale: s,
                         child: Container(
-                          width: 64,
-                          height: 64,
+                          width: 72,
+                          height: 72,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [_pink, _purple],
+                              colors: [_gold, Color(0xFFE8C874)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
-                              BoxShadow(color: _pink.withValues(alpha: 0.3), blurRadius: 20, spreadRadius: 4),
+                              BoxShadow(color: _gold.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 6),
+                              BoxShadow(color: _gold.withValues(alpha: 0.15), blurRadius: 40, spreadRadius: 12),
                             ],
                           ),
-                          child: const Icon(LucideIcons.heart, color: Colors.white, size: 32),
+                          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 34),
                         ),
                       );
                     },
@@ -122,7 +127,7 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Left avatar (current user) — slides from left
+                        // Left avatar (current user)
                         AnimatedBuilder(
                           animation: _entranceCtrl,
                           builder: (ctx, _) {
@@ -135,29 +140,31 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                                   imageUrl: currentUser?.mainPhotoUrl,
                                   name: currentUser?.firstName,
                                   lastName: currentUser?.lastName,
-                                  borderColor: _pink,
+                                  borderColor: _gold,
                                 ),
                               ),
                             );
                           },
                         ),
-                        // Center heart overlap
+                        // Center connection symbol
                         Positioned(
                           child: ScaleTransition(
                             scale: _scaleAnim,
                             child: Container(
-                              width: 36,
-                              height: 36,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
+                                boxShadow: [
+                                  BoxShadow(color: _gold.withValues(alpha: 0.3), blurRadius: 12),
+                                ],
                               ),
-                              child: const Icon(LucideIcons.heart, color: _pink, size: 20),
+                              child: const Icon(Icons.favorite, color: _emerald, size: 22),
                             ),
                           ),
                         ),
-                        // Right avatar (matched user) — slides from right
+                        // Right avatar (matched user)
                         AnimatedBuilder(
                           animation: _entranceCtrl,
                           builder: (ctx, _) {
@@ -170,7 +177,7 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                                   imageUrl: matchedUser?.mainPhotoUrl,
                                   name: matchedUser?.firstName,
                                   lastName: matchedUser?.lastName,
-                                  borderColor: _purple,
+                                  borderColor: _emerald,
                                 ),
                               ),
                             );
@@ -188,17 +195,27 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                   opacity: _fadeAnim,
                   child: ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
-                      colors: [_pink, _purple],
+                      colors: [_gold, _emerald],
                     ).createShader(bounds),
                     child: const Text(
-                      "It's a Match!",
+                      'A Beautiful Connection',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.3,
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Names
+                FadeTransition(
+                  opacity: _fadeAnim,
+                  child: Text(
+                    '${currentUser?.firstName ?? 'You'} & ${matchedUser?.firstName ?? 'Someone'}',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _emerald.withValues(alpha: 0.85)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -209,9 +226,9 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 48),
                     child: Text(
-                      'You and ${matchedUser?.firstName ?? 'someone'} liked each other.\nStart a conversation now!',
+                      'May this connection be blessed with Baraka.\nStart a respectful conversation.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.6),
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.6),
                     ),
                   ),
                 ),
@@ -239,11 +256,11 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _pink,
+                            backgroundColor: _emerald,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                            shadowColor: _pink.withValues(alpha: 0.3),
+                            shadowColor: _emerald.withValues(alpha: 0.3),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -281,33 +298,34 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
     );
   }
 
-  List<Widget> _buildConfetti() {
+  List<Widget> _buildLightParticles() {
     final rng = Random(42);
-    return List.generate(20, (i) {
+    return List.generate(15, (i) {
       final left = rng.nextDouble() * MediaQuery.of(context).size.width;
       final delay = rng.nextDouble();
-      final size = 6.0 + rng.nextDouble() * 8;
-      final color = [_pink, _purple, const Color(0xFFFFD700), const Color(0xFF00BFFF)][i % 4];
+      final size = 4.0 + rng.nextDouble() * 6;
+      final color = [_gold, _emerald, _cream, const Color(0xFFE8C874)][i % 4];
       return AnimatedBuilder(
         animation: _confettiCtrl,
         builder: (ctx, _) {
-          final t = (_confettiCtrl.value - delay * 0.4).clamp(0.0, 1.0);
-          final y = -20.0 + t * (MediaQuery.of(context).size.height + 40);
-          final opacity = t < 0.8 ? 1.0 : (1.0 - (t - 0.8) / 0.2);
+          final t = (_confettiCtrl.value - delay * 0.3).clamp(0.0, 1.0);
+          final startY = MediaQuery.of(context).size.height * 0.4;
+          final y = startY - t * (startY + 60);
+          final opacity = t < 0.3 ? t / 0.3 : (t < 0.7 ? 1.0 : (1.0 - (t - 0.7) / 0.3));
           return Positioned(
-            left: left + sin(t * pi * 3) * 30,
+            left: left + sin(t * pi * 2) * 20,
             top: y,
             child: Opacity(
               opacity: opacity.clamp(0.0, 1.0),
-              child: Transform.rotate(
-                angle: t * pi * 2 * (i.isEven ? 1 : -1),
-                child: Container(
-                  width: size,
-                  height: size * 0.7,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.6),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8),
+                  ],
                 ),
               ),
             ),
@@ -315,6 +333,44 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
         },
       );
     });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Radiant glow background widget
+// ═══════════════════════════════════════════════════════════════════════════
+class _RadiantGlow extends StatelessWidget {
+  final Animation<double> animation;
+  const _RadiantGlow({required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (ctx, _) {
+        final pulse = 0.85 + animation.value * 0.15;
+        return Center(
+          child: Transform.scale(
+            scale: pulse,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                    const Color(0xFF2E7D32).withValues(alpha: 0.05),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

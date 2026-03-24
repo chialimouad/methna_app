@@ -5,7 +5,7 @@ import 'package:methna_app/app/controllers/settings_controller.dart';
 class ProfileBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => ProfileController());
-    Get.lazyPut(() => SettingsController());
+    Get.put(ProfileController());
+    Get.put(SettingsController());
   }
 }
