@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/app/controllers/signup_data.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class GenderScreen extends GetView<SignupController> {
@@ -61,7 +63,7 @@ class GenderScreen extends GetView<SignupController> {
 
                     // ── Pill options ──
                     Obx(() => Column(
-                          children: controller.genders.map((gender) {
+                          children: SignupData.genders.map((gender) {
                             final selected =
                                 controller.selectedGender.value == gender;
                             final label = genderLabels[gender] ?? gender;

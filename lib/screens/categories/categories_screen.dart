@@ -4,6 +4,7 @@ import 'package:methna_app/app/controllers/categories_controller.dart';
 import 'package:methna_app/app/data/models/category_model.dart';
 import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/core/utils/icon_helper.dart';
 import 'package:methna_app/core/widgets/animated_empty_state.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -40,6 +41,32 @@ class CategoriesScreen extends StatelessWidget {
       body: Obx(() {
         if (controller.isLoading.value && controller.categories.isEmpty) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (controller.hasError.value && controller.categories.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.wifiOff, size: 48, color: secondaryColor),
+                const SizedBox(height: 16),
+                Text('Failed to load categories', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
+                const SizedBox(height: 8),
+                Text('Please check your connection and try again.', style: TextStyle(fontSize: 13, color: secondaryColor)),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: controller.fetchCategories,
+                  icon: const Icon(LucideIcons.refreshCw, size: 16),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         if (controller.categories.isEmpty) {
@@ -133,7 +160,7 @@ class _CategoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    _iconForCategory(category.name),
+                    IconHelper.getIcon(category.icon),
                     color: _cardColor,
                     size: 24,
                   ),
@@ -201,15 +228,4 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 
-  IconData _iconForCategory(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('practic') || lower.contains('religi')) return LucideIcons.bookOpen;
-    if (lower.contains('new') || lower.contains('recent')) return LucideIcons.sparkles;
-    if (lower.contains('verif')) return LucideIcons.badgeCheck;
-    if (lower.contains('premium') || lower.contains('gold')) return LucideIcons.crown;
-    if (lower.contains('near') || lower.contains('local')) return LucideIcons.mapPin;
-    if (lower.contains('active') || lower.contains('online')) return LucideIcons.activity;
-    if (lower.contains('married') || lower.contains('divorced')) return LucideIcons.heart;
-    return LucideIcons.users;
-  }
 }

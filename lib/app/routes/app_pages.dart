@@ -7,6 +7,9 @@ import 'package:methna_app/app/bindings/home_binding.dart';
 import 'package:methna_app/app/bindings/chat_binding.dart';
 import 'package:methna_app/app/bindings/profile_binding.dart';
 import 'package:methna_app/app/bindings/users_binding.dart';
+import 'package:methna_app/app/bindings/categories_binding.dart';
+import 'package:methna_app/app/bindings/notifications_binding.dart';
+import 'package:methna_app/app/bindings/signup_binding.dart';
 
 // Screens
 import 'package:methna_app/screens/success_stories/success_stories_screen.dart';
@@ -38,14 +41,15 @@ import 'package:methna_app/screens/main/home/match_found_screen.dart';
 import 'package:methna_app/screens/main/home/filter_screen.dart';
 import 'package:methna_app/screens/main/users/user_detail_screen.dart';
 import 'package:methna_app/screens/main/profile/edit_profile_images_screen.dart';
-import 'package:methna_app/screens/main/profile/edit_profile_data_screen.dart';
+import 'package:methna_app/screens/main/profile/edit_profile_photos_screen.dart';
+import 'package:methna_app/screens/main/profile/enhanced_edit_profile_screen.dart';
+import 'package:methna_app/screens/main/profile/beautiful_edit_profile_screen.dart';
 import 'package:methna_app/screens/main/chat/message_settings_screen.dart';
 import 'package:methna_app/screens/settings/discovery_preferences_screen.dart';
 import 'package:methna_app/screens/settings/profile_privacy_screen.dart';
 import 'package:methna_app/screens/settings/account_security_screen.dart';
 import 'package:methna_app/screens/settings/subscription_screen.dart';
 import 'package:methna_app/screens/settings/app_appearance_screen.dart';
-import 'package:methna_app/screens/settings/third_party_integrations_screen.dart';
 import 'package:methna_app/screens/settings/data_analytics_screen.dart';
 import 'package:methna_app/screens/settings/help_support_screen.dart';
 import 'package:methna_app/screens/settings/notification_settings_screen.dart';
@@ -55,8 +59,10 @@ import 'package:methna_app/screens/settings/blocked_users_screen.dart';
 import 'package:methna_app/screens/settings/manage_messages_screen.dart';
 import 'package:methna_app/screens/settings/manage_active_status_screen.dart';
 import 'package:methna_app/screens/settings/faq_screen.dart';
-import 'package:methna_app/screens/settings/contact_support_screen.dart';
 import 'package:methna_app/screens/settings/app_language_screen.dart';
+import 'package:methna_app/screens/settings/report_request_screen.dart';
+import 'package:methna_app/screens/settings/contact_support_screen.dart';
+import 'package:methna_app/screens/settings/static_content_screen.dart';
 import 'package:methna_app/screens/categories/categories_screen.dart';
 import 'package:methna_app/screens/categories/category_users_screen.dart';
 
@@ -108,72 +114,84 @@ class AppPages {
     GetPage(
       name: AppRoutes.signupUsername,
       page: () => const UsernameScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupGender,
       page: () => const GenderScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupMaritalStatus,
       page: () => const MaritalStatusScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupProfileDetails,
       page: () => const ProfileDetailsScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupBirthday,
       page: () => const BirthdayScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupEmailVerification,
       page: () => const EmailVerificationScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupFaithReligion,
       page: () => const FaithReligionScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupHobbies,
       page: () => const HobbiesInterestsScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupProfession,
       page: () => const ProfessionPersonalScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupPhotos,
       page: () => const AddPhotosScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupSelfie,
       page: () => const SelfieVerificationScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
       name: AppRoutes.signupLocation,
       page: () => const EnableLocationScreen(),
+      binding: SignupBinding(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 350),
     ),
@@ -194,7 +212,7 @@ class AppPages {
     // ─── Sub-screens ─────────────────────────────────────────
     GetPage(
       name: AppRoutes.editProfile,
-      page: () => const EditProfileDataScreen(),
+      page: () => const BeautifulEditProfileScreen(),
       transition: Transition.rightToLeft,
     ),
     GetPage(
@@ -217,6 +235,13 @@ class AppPages {
     GetPage(
       name: AppRoutes.notifications,
       page: () => const NotificationsScreen(),
+      binding: NotificationsBinding(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.whoLikedMe,
+      page: () => const NotificationsScreen(), // Reuse notifications screen for now
+      binding: NotificationsBinding(),
       transition: Transition.rightToLeft,
     ),
     GetPage(
@@ -268,11 +293,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.appAppearance,
       page: () => const AppAppearanceScreen(),
-      transition: Transition.rightToLeft,
-    ),
-    GetPage(
-      name: AppRoutes.thirdPartyIntegrations,
-      page: () => const ThirdPartyIntegrationsScreen(),
       transition: Transition.rightToLeft,
     ),
     GetPage(
@@ -330,6 +350,21 @@ class AppPages {
       page: () => const AppLanguageScreen(),
       transition: Transition.rightToLeft,
     ),
+    GetPage(
+      name: AppRoutes.reportRequest,
+      page: () => const ReportRequestScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.termsConditions,
+      page: () => const StaticContentScreen(title: 'Terms & Conditions', contentType: 'terms'),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.privacyPolicy,
+      page: () => const StaticContentScreen(title: 'Privacy Policy', contentType: 'privacy'),
+      transition: Transition.rightToLeft,
+    ),
 
     // ─── Profile Sub-screens ───────────────────────────────
     GetPage(
@@ -338,8 +373,13 @@ class AppPages {
       transition: Transition.rightToLeft,
     ),
     GetPage(
-      name: AppRoutes.editProfileData,
-      page: () => const EditProfileDataScreen(),
+      name: AppRoutes.enhancedEditProfile,
+      page: () => const EnhancedEditProfileScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.editProfilePhotos,
+      page: () => const EditProfilePhotosScreen(),
       transition: Transition.rightToLeft,
     ),
 
@@ -359,6 +399,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.categoryUsers,
       page: () => const CategoryUsersScreen(),
+      binding: CategoriesBinding(),
       transition: Transition.rightToLeft,
     ),
 

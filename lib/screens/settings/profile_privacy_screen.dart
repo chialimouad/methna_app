@@ -94,7 +94,7 @@ class ProfilePrivacyScreen extends GetView<SettingsController> {
                     title: 'view_web_profile'.tr,
                     textColor: textColor,
                     onTap: () {
-                      Get.to(() => const methna_app.StaticContentScreen(title: 'Web Profile'));
+                      Get.to(() => const methna_app.StaticContentScreen(title: 'Web Profile', contentType: 'web_profile'));
                     },
                   ),
                   _divider(isDark),

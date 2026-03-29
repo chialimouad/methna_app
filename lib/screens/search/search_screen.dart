@@ -9,6 +9,8 @@ import 'package:methna_app/core/constants/api_constants.dart';
 import 'package:methna_app/core/utils/helpers.dart';
 import 'package:methna_app/core/widgets/animated_empty_state.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/core/widgets/islamic_pattern_painter.dart';
+import 'package:methna_app/core/widgets/mihrab_clipper.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -108,8 +110,10 @@ class _SearchScreenState extends State<SearchScreen> {
         }
         return null;
       }).whereType<_SearchResult>().toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Search] _performSearch error: $e');
       results.clear();
+      Helpers.showSnackbar(message: 'Search failed. Please try again.', isError: true);
     } finally {
       isLoading.value = false;
     }
@@ -124,9 +128,19 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: Stack(
+        children: [
+          // 0. Islamic Background Pattern
+          Positioned.fill(
+            child: IslamicPatternWidget(
+              opacity: isDark ? 0.03 : 0.05,
+              color: isDark ? Colors.white : AppColors.emerald,
+            ),
+          ),
+          
+          SafeArea(
+            child: Column(
+              children: [
             // ── Search Bar ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -135,15 +149,18 @@ class _SearchScreenState extends State<SearchScreen> {
                   GestureDetector(
                     onTap: () => Get.back(),
                     child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                      width: 44, height: 48,
+                      padding: const EdgeInsets.all(2),
+                      child: ClipPath(
+                        clipper: MihrabClipper(),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.cardDark : Colors.white,
+                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                          ),
+                          child: Icon(LucideIcons.chevronLeft, size: 20, color: AppColors.emerald),
                         ),
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(LucideIcons.chevronLeft, size: 16, color: textColor),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -152,17 +169,16 @@ class _SearchScreenState extends State<SearchScreen> {
                       height: 48,
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.cardDark : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                          color: AppColors.gold.withValues(alpha: 0.3),
                         ),
                         boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
                         ],
                       ),
                       child: TextField(
@@ -171,15 +187,15 @@ class _SearchScreenState extends State<SearchScreen> {
                         autofocus: true,
                         style: TextStyle(fontSize: 15, color: textColor),
                         decoration: InputDecoration(
-                          hintText: 'Search by name, city, interests...',
-                          hintStyle: TextStyle(fontSize: 14, color: secondaryColor.withValues(alpha: 0.6)),
-                          prefixIcon: Icon(LucideIcons.search, size: 18, color: secondaryColor),
+                          hintText: 'search_hint'.tr,
+                          hintStyle: TextStyle(fontSize: 14, color: secondaryColor.withValues(alpha: 0.5)),
+                          prefixIcon: const Icon(LucideIcons.search, size: 20, color: AppColors.emerald),
                           suffixIcon: Obx(() => query.value.isNotEmpty
                               ? GestureDetector(
                                   onTap: () {
                                     _searchCtrl.clear();
                                   },
-                                  child: Icon(LucideIcons.x, size: 16, color: secondaryColor),
+                                  child: const Icon(LucideIcons.x, size: 18, color: AppColors.gold),
                                 )
                               : const SizedBox.shrink()),
                           border: InputBorder.none,
@@ -224,19 +240,21 @@ class _SearchScreenState extends State<SearchScreen> {
                       isDark: isDark,
                       textColor: textColor,
                       secondaryColor: secondaryColor,
-                      onTap: () {
-                        Get.toNamed(AppRoutes.userDetail, arguments: {'userId': r.userId});
-                      },
-                    );
-                  },
-                );
-              }),
-            ),
-          ],
+                        onTap: () {
+                          Get.toNamed(AppRoutes.userDetail, arguments: {'userId': r.userId});
+                        },
+                      );
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildInitialState(bool isDark, Color secondaryColor) {
     return Center(
@@ -244,13 +262,14 @@ class _SearchScreenState extends State<SearchScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: AppColors.emerald.withValues(alpha: 0.1),
               shape: BoxShape.circle,
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
-            child: const Icon(LucideIcons.search, size: 32, color: AppColors.primary),
+            child: const Icon(LucideIcons.search, size: 36, color: AppColors.gold),
           ),
           const SizedBox(height: 16),
           Text(
@@ -366,17 +385,16 @@ class _SearchResultTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight.withValues(alpha: 0.5),
+            color: AppColors.gold.withValues(alpha: 0.2),
           ),
           boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -409,12 +427,12 @@ class _SearchResultTile extends StatelessWidget {
                       ),
                     )
                   : Center(
-                      child: Text(
+                        child: Text(
                         Helpers.getInitials(result.firstName, result.lastName),
                         style: const TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.emerald,
                         ),
                       ),
                     ),
@@ -458,18 +476,17 @@ class _SearchResultTile extends StatelessWidget {
                   if (result.interests.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
                       children: result.interests.take(3).map((i) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
+                            color: AppColors.gold.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
                           ),
                           child: Text(
                             i,
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary),
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.gold),
                           ),
                         );
                       }).toList(),

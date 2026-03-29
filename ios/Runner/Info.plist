@@ -6,6 +6,14 @@
 		<string>Methna needs your location to find matches near you.</string>
 		<key>NSLocationAlwaysUsageDescription</key>
 		<string>Methna needs your location to find matches near you.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Methna needs camera access for profile photos and verification.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Methna needs photo library access to select profile pictures.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Methna needs microphone access for voice messages.</string>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Methna uses Face ID for secure authentication.</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>

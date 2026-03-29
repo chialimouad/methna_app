@@ -60,9 +60,8 @@ class LoginScreen extends GetView<LoginController> {
 
                       const SizedBox(height: 36),
 
-                      // ── Email field ──
                       Text(
-                        'email'.tr,
+                        'Email or Username',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -74,9 +73,9 @@ class LoginScreen extends GetView<LoginController> {
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: controller.emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.next,
-                        validator: Validators.email,
+                        validator: Validators.loginIdentifier,
                         style: TextStyle(
                           fontSize: 15,
                           color: isDark
@@ -84,7 +83,7 @@ class LoginScreen extends GetView<LoginController> {
                               : AppColors.textPrimaryLight,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'email_hint'.tr,
+                          hintText: 'Enter your email or username',
                           hintStyle: TextStyle(color: hintColor, fontSize: 15),
                           prefixIcon: Icon(LucideIcons.mail,
                               size: 20, color: hintColor),

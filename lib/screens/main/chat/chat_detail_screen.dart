@@ -32,7 +32,7 @@ class ChatDetailScreen extends GetView<ChatController> {
         body: SafeArea(
           child: Column(
             children: [
-              // ── Top bar: back + name + call/video ──
+              // ── Top bar: back + name + status ──
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                 child: Row(
@@ -84,23 +84,7 @@ class ChatDetailScreen extends GetView<ChatController> {
                       );
                     }),
                     const Spacer(),
-                    // Call icon
-                    GestureDetector(
-                      onTap: () {
-                        Helpers.showSnackbar(message: 'Voice/Video calling coming soon!');
-                      },
-                      child: Icon(LucideIcons.phone,
-                          size: 22, color: textColor),
-                    ),
-                    const SizedBox(width: 16),
-                    // Video icon
-                    GestureDetector(
-                      onTap: () {
-                        Helpers.showSnackbar(message: 'Voice/Video calling coming soon!');
-                      },
-                      child: Icon(LucideIcons.video,
-                          size: 24, color: textColor),
-                    ),
+                    const Spacer(),
                   ],
                 ),
               ),
@@ -115,8 +99,7 @@ class ChatDetailScreen extends GetView<ChatController> {
                 child: Obx(() {
                   if (controller.messagesLoading.value &&
                       controller.activeMessages.isEmpty) {
-                    return const Center(
-                        child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator());
                   }
                   if (controller.activeMessages.isEmpty) {
                     return Column(
@@ -206,14 +189,6 @@ class ChatDetailScreen extends GetView<ChatController> {
                 ),
                 child: Row(
                   children: [
-                    // + icon for images
-                    GestureDetector(
-                      onTap: controller.sendImageMessage,
-                      child: Icon(LucideIcons.imagePlus,
-                          size: 24, color: secondaryColor),
-                    ),
-                    const SizedBox(width: 10),
-
                     // Text field
                     Expanded(
                       child: Container(
@@ -223,43 +198,25 @@ class ChatDetailScreen extends GetView<ChatController> {
                               : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: controller.messageTextController,
-                                maxLines: 4,
-                                minLines: 1,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                onChanged: (_) =>
-                                    controller.sendTypingIndicator(),
-                                decoration: InputDecoration(
-                                  hintText: 'type_message'.tr,
-                                  hintStyle: TextStyle(
-                                    color: secondaryColor,
-                                    fontSize: 14,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 10),
-                                ),
-                              ),
+                        child: TextField(
+                          controller: controller.messageTextController,
+                          maxLines: 4,
+                          minLines: 1,
+                          textCapitalization:
+                              TextCapitalization.sentences,
+                          onChanged: (_) =>
+                              controller.sendTypingIndicator(),
+                          decoration: InputDecoration(
+                            hintText: 'type_message'.tr,
+                            hintStyle: TextStyle(
+                              color: secondaryColor,
+                              fontSize: 14,
                             ),
-                            // Mic icon
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(right: 12),
-                              child: GestureDetector(
-                                onTap: () {
-                                  Helpers.showSnackbar(message: 'Voice messages coming soon!');
-                                },
-                                child: Icon(LucideIcons.mic,
-                                    size: 22, color: secondaryColor),
-                              ),
-                            ),
-                          ],
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                          ),
                         ),
                       ),
                     ),
@@ -306,8 +263,6 @@ class _MessageBubble extends StatelessWidget {
   final bool isMine;
   final bool isDark;
 
-  static const _purple = AppColors.primary;
-
   const _MessageBubble({
     required this.message,
     required this.isMine,
@@ -322,70 +277,66 @@ class _MessageBubble extends StatelessWidget {
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final isRTL = Directionality.of(context) == TextDirection.rtl;
 
-    // In RTL, "mine" bubbles go to the left visually, so flip alignment
     final alignment = isMine
         ? (isRTL ? Alignment.centerLeft : Alignment.centerRight)
         : (isRTL ? Alignment.centerRight : Alignment.centerLeft);
 
     return Align(
       alignment: alignment,
-      child: Container(
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMine
-              ? _purple
-              : (isDark ? AppColors.cardDark : Colors.grey.shade100),
-          borderRadius: BorderRadiusDirectional.only(
-            topStart: const Radius.circular(20),
-            topEnd: const Radius.circular(20),
-            bottomStart: Radius.circular(isMine ? 20 : 4),
-            bottomEnd: Radius.circular(isMine ? 4 : 20),
-          ).resolve(Directionality.of(context)),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(
+      child: Column(
+        crossAxisAlignment:
+            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints:
+                BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            margin: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMine
+                  ? AppColors.primary
+                  : (isDark ? AppColors.cardDark : Colors.grey.shade100),
+              borderRadius: BorderRadiusDirectional.only(
+                topStart: const Radius.circular(20),
+                topEnd: const Radius.circular(20),
+                bottomStart: Radius.circular(isMine ? 20 : 4),
+                bottomEnd: Radius.circular(isMine ? 4 : 20),
+              ).resolve(Directionality.of(context)),
+            ),
+            child: Text(
               message.content,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 color: isMine ? Colors.white : textColor,
-                height: 1.5,
+                height: 1.4,
               ),
             ),
-            const SizedBox(height: 3),
-            Row(
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   Helpers.formatTime(message.createdAt),
                   style: TextStyle(
                     fontSize: 10,
-                    color: isMine
-                        ? Colors.white.withValues(alpha: 0.6)
-                        : secondaryColor,
+                    color: secondaryColor,
                   ),
                 ),
                 if (isMine) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    message.isRead
-                        ? LucideIcons.checkCheck
-                        : LucideIcons.check,
+                    message.isRead ? LucideIcons.checkCheck : LucideIcons.check,
                     size: 14,
-                    color: message.isRead
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.6),
+                    color: message.isRead ? AppColors.primary : secondaryColor,
                   ),
                 ],
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+        ],
       ),
     );
   }

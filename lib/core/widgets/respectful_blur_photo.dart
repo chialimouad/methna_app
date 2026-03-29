@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:methna_app/core/utils/cloudinary_url.dart';
 
 /// Respectful Blur System — photos are blurred based on interaction level.
 /// - Level 0 (stranger): heavy blur (sigma 18)
@@ -62,7 +63,7 @@ class RespectfulBlurPhoto extends StatelessWidget {
     }
 
     Widget image = CachedNetworkImage(
-      imageUrl: imageUrl!,
+      imageUrl: CloudinaryUrl.medium(imageUrl),
       fit: fit,
       width: width,
       height: height,

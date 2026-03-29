@@ -10,6 +10,8 @@ class UserModel {
   final bool emailVerified;
   final bool phoneVerified;
   final bool selfieVerified;
+  final String? selfieUrl;
+  final String? documentUrl;
   final bool isShadowBanned;
   final int trustScore;
   final int flagCount;
@@ -22,6 +24,8 @@ class UserModel {
   final ProfileModel? profile;
   final List<PhotoModel>? photos;
   final SubscriptionModel? subscription;
+  final int sentComplimentsCount;
+  final int profileBoostsCount;
 
   UserModel({
     required this.id,
@@ -35,6 +39,8 @@ class UserModel {
     this.emailVerified = false,
     this.phoneVerified = false,
     this.selfieVerified = false,
+    this.selfieUrl,
+    this.documentUrl,
     this.isShadowBanned = false,
     this.trustScore = 100,
     this.flagCount = 0,
@@ -47,6 +53,8 @@ class UserModel {
     this.profile,
     this.photos,
     this.subscription,
+    this.sentComplimentsCount = 0,
+    this.profileBoostsCount = 0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +70,8 @@ class UserModel {
       emailVerified: json['emailVerified'] ?? false,
       phoneVerified: json['phoneVerified'] ?? false,
       selfieVerified: json['selfieVerified'] ?? false,
+      selfieUrl: json['selfieUrl'],
+      documentUrl: json['documentUrl'],
       isShadowBanned: json['isShadowBanned'] ?? false,
       trustScore: json['trustScore'] ?? 100,
       flagCount: json['flagCount'] ?? 0,
@@ -78,6 +88,8 @@ class UserModel {
       subscription: json['subscription'] != null
           ? SubscriptionModel.fromJson(json['subscription'])
           : null,
+      sentComplimentsCount: json['sentComplimentsCount'] ?? 0,
+      profileBoostsCount: json['profileBoostsCount'] ?? 0,
     );
   }
 
@@ -93,6 +105,22 @@ class UserModel {
         'emailVerified': emailVerified,
         'phoneVerified': phoneVerified,
         'selfieVerified': selfieVerified,
+        'selfieUrl': selfieUrl,
+        'documentUrl': documentUrl,
+        'isShadowBanned': isShadowBanned,
+        'trustScore': trustScore,
+        'flagCount': flagCount,
+        'deviceCount': deviceCount,
+        'notificationsEnabled': notificationsEnabled,
+        'lastKnownIp': lastKnownIp,
+        'lastLoginAt': lastLoginAt?.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'profile': profile?.toJson(),
+        'photos': photos?.map((p) => p.toJson()).toList(),
+        'subscription': subscription?.toJson(),
+        'sentComplimentsCount': sentComplimentsCount,
+        'profileBoostsCount': profileBoostsCount,
       };
 
   String get fullName => '${firstName ?? ''} ${lastName ?? ''}'.trim();
@@ -102,7 +130,20 @@ class UserModel {
       : null;
   bool get isOnline => status == 'active' && lastLoginAt != null &&
       DateTime.now().difference(lastLoginAt!).inMinutes < 5;
-  bool get isPremium => subscription?.plan != 'free' && subscription?.status == 'active';
+  bool get isTrialActive {
+    final trialDuration = const Duration(days: 2);
+    final now = DateTime.now();
+    return now.difference(createdAt) < trialDuration;
+  }
+
+  Duration get trialTimeRemaining {
+    final trialDuration = const Duration(days: 2);
+    final expiration = createdAt.add(trialDuration);
+    final remaining = expiration.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
+  bool get isPremium => (subscription != null && subscription!.isPremium) || isTrialActive;
 }
 
 class ProfileModel {
@@ -140,8 +181,8 @@ class ProfileModel {
   // Lifestyle
   final String? livingSituation;
   final String? communicationStyle;
-  final String? dietary;
   final String? alcohol;
+  final String? dietary;
   final String? hijabStatus;
   final String? workoutFrequency;
   final String? sleepSchedule;
@@ -211,8 +252,8 @@ class ProfileModel {
     this.weight,
     this.livingSituation,
     this.communicationStyle,
-    this.dietary,
     this.alcohol,
+    this.dietary,
     this.hijabStatus,
     this.workoutFrequency,
     this.sleepSchedule,
@@ -272,8 +313,8 @@ class ProfileModel {
       weight: json['weight'],
       livingSituation: json['livingSituation'],
       communicationStyle: json['communicationStyle'],
-      dietary: json['dietary'],
       alcohol: json['alcohol'],
+      dietary: json['dietary'],
       hijabStatus: json['hijabStatus'],
       workoutFrequency: json['workoutFrequency'],
       sleepSchedule: json['sleepSchedule'],
@@ -300,64 +341,72 @@ class ProfileModel {
       showDistance: json['showDistance'] ?? true,
       showOnlineStatus: json['showOnlineStatus'] ?? true,
       showLastSeen: json['showLastSeen'] ?? true,
-      profileCompletionPercentage: json['profileCompletionPercentage'] ?? 0,
-      activityScore: json['activityScore'] ?? 0,
+      profileCompletionPercentage: (json['profileCompletionPercentage'] as num?)?.toInt() ?? 0,
+      activityScore: (json['activityScore'] as num?)?.toInt() ?? 0,
       isComplete: json['isComplete'] ?? false,
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{};
-    if (gender != null) map['gender'] = gender;
-    if (dateOfBirth != null) map['dateOfBirth'] = dateOfBirth!.toIso8601String().split('T')[0];
-    if (bio != null) map['bio'] = bio;
-    if (ethnicity != null) map['ethnicity'] = ethnicity;
-    if (nationality != null) map['nationality'] = nationality;
-    if (nationalities != null) map['nationalities'] = nationalities;
-    if (city != null) map['city'] = city;
-    if (country != null) map['country'] = country;
-    if (latitude != null) map['latitude'] = latitude;
-    if (longitude != null) map['longitude'] = longitude;
-    if (religiousLevel != null) map['religiousLevel'] = religiousLevel;
-    if (sect != null) map['sect'] = sect;
-    if (prayerFrequency != null) map['prayerFrequency'] = prayerFrequency;
-    if (marriageIntention != null) map['marriageIntention'] = marriageIntention;
-    if (maritalStatus != null) map['maritalStatus'] = maritalStatus;
-    if (secondWifePreference != null) map['secondWifePreference'] = secondWifePreference;
-    if (intentMode != null) map['intentMode'] = intentMode;
-    if (education != null) map['education'] = education;
-    if (educationDetails != null) map['educationDetails'] = educationDetails;
-    if (jobTitle != null) map['jobTitle'] = jobTitle;
-    if (company != null) map['company'] = company;
-    if (height != null) map['height'] = height;
-    if (weight != null) map['weight'] = weight;
-    if (livingSituation != null) map['livingSituation'] = livingSituation;
-    if (communicationStyle != null) map['communicationStyle'] = communicationStyle;
-    if (dietary != null) map['dietary'] = dietary;
-    if (alcohol != null) map['alcohol'] = alcohol;
-    if (hijabStatus != null) map['hijabStatus'] = hijabStatus;
-    if (workoutFrequency != null) map['workoutFrequency'] = workoutFrequency;
-    if (sleepSchedule != null) map['sleepSchedule'] = sleepSchedule;
-    if (socialMediaUsage != null) map['socialMediaUsage'] = socialMediaUsage;
-    if (hasPets != null) map['hasPets'] = hasPets;
-    if (petPreference != null) map['petPreference'] = petPreference;
-    if (vaccinationStatus != null) map['vaccinationStatus'] = vaccinationStatus;
-    if (bloodType != null) map['bloodType'] = bloodType;
-    if (healthNotes != null) map['healthNotes'] = healthNotes;
-    if (familyPlans != null) map['familyPlans'] = familyPlans;
-    if (familyValues != null) map['familyValues'] = familyValues;
-    if (hasChildren != null) map['hasChildren'] = hasChildren;
-    if (numberOfChildren != null) map['numberOfChildren'] = numberOfChildren;
-    if (wantsChildren != null) map['wantsChildren'] = wantsChildren;
-    if (willingToRelocate != null) map['willingToRelocate'] = willingToRelocate;
-    if (interests != null) map['interests'] = interests;
-    if (languages != null) map['languages'] = languages;
-    if (favoriteMusic != null) map['favoriteMusic'] = favoriteMusic;
-    if (favoriteMovies != null) map['favoriteMovies'] = favoriteMovies;
-    if (favoriteBooks != null) map['favoriteBooks'] = favoriteBooks;
-    if (travelPreferences != null) map['travelPreferences'] = travelPreferences;
-    if (aboutPartner != null) map['aboutPartner'] = aboutPartner;
-    return map;
+    return {
+      if (id != null) 'id': id,
+      if (gender != null) 'gender': gender,
+      if (dateOfBirth != null) 'dateOfBirth': dateOfBirth!.toIso8601String(),
+      if (bio != null) 'bio': bio,
+      if (ethnicity != null) 'ethnicity': ethnicity,
+      if (nationality != null) 'nationality': nationality,
+      if (nationalities != null) 'nationalities': nationalities,
+      if (city != null) 'city': city,
+      if (country != null) 'country': country,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (religiousLevel != null) 'religiousLevel': religiousLevel,
+      if (sect != null) 'sect': sect,
+      if (prayerFrequency != null) 'prayerFrequency': prayerFrequency,
+      if (marriageIntention != null) 'marriageIntention': marriageIntention,
+      if (maritalStatus != null) 'maritalStatus': maritalStatus,
+      if (secondWifePreference != null) 'secondWifePreference': secondWifePreference,
+      if (intentMode != null) 'intentMode': intentMode,
+      if (education != null) 'education': education,
+      if (educationDetails != null) 'educationDetails': educationDetails,
+      if (jobTitle != null) 'jobTitle': jobTitle,
+      if (company != null) 'company': company,
+      if (height != null) 'height': height,
+      if (weight != null) 'weight': weight,
+      if (livingSituation != null) 'livingSituation': livingSituation,
+      if (communicationStyle != null) 'communicationStyle': communicationStyle,
+      if (alcohol != null) 'alcohol': alcohol,
+      if (dietary != null) 'dietary': dietary,
+      if (hijabStatus != null) 'hijabStatus': hijabStatus,
+      if (workoutFrequency != null) 'workoutFrequency': workoutFrequency,
+      if (sleepSchedule != null) 'sleepSchedule': sleepSchedule,
+      if (socialMediaUsage != null) 'socialMediaUsage': socialMediaUsage,
+      if (hasPets != null) 'hasPets': hasPets,
+      if (petPreference != null) 'petPreference': petPreference,
+      if (vaccinationStatus != null) 'vaccinationStatus': vaccinationStatus,
+      if (bloodType != null) 'bloodType': bloodType,
+      if (healthNotes != null) 'healthNotes': healthNotes,
+      if (familyPlans != null) 'familyPlans': familyPlans,
+      if (familyValues != null) 'familyValues': familyValues,
+      if (hasChildren != null) 'hasChildren': hasChildren,
+      if (numberOfChildren != null) 'numberOfChildren': numberOfChildren,
+      if (wantsChildren != null) 'wantsChildren': wantsChildren,
+      if (willingToRelocate != null) 'willingToRelocate': willingToRelocate,
+      if (interests != null) 'interests': interests,
+      if (languages != null) 'languages': languages,
+      if (favoriteMusic != null) 'favoriteMusic': favoriteMusic,
+      if (favoriteMovies != null) 'favoriteMovies': favoriteMovies,
+      if (favoriteBooks != null) 'favoriteBooks': favoriteBooks,
+      if (travelPreferences != null) 'travelPreferences': travelPreferences,
+      if (aboutPartner != null) 'aboutPartner': aboutPartner,
+      'showAge': showAge,
+      'showDistance': showDistance,
+      'showOnlineStatus': showOnlineStatus,
+      'showLastSeen': showLastSeen,
+      'profileCompletionPercentage': profileCompletionPercentage,
+      'activityScore': activityScore,
+      'isComplete': isComplete,
+    };
   }
 
   int get age => dateOfBirth != null
@@ -438,7 +487,17 @@ class SubscriptionModel {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'plan': plan,
+        'status': status,
+        'startDate': startDate?.toIso8601String(),
+        'endDate': endDate?.toIso8601String(),
+        'paymentReference': paymentReference,
+      };
+
   bool get isActive => status == 'active';
-  bool get isPremium => plan != 'free' && isActive;
-  bool get isGold => plan == 'gold' && isActive;
+  bool get isExpired => endDate != null && DateTime.now().isAfter(endDate!);
+  bool get isPremium => plan != 'free' && isActive && !isExpired;
+  bool get isGold => plan == 'gold' && isActive && !isExpired;
 }

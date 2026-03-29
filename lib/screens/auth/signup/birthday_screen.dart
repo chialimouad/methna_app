@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -88,7 +89,7 @@ class BirthdayScreen extends GetView<SignupController> {
                             // MM
                             Expanded(
                               child: _DateBox(
-                                label: 'MM',
+                                label: 'mm'.tr,
                                 value: dob?.month.toString().padLeft(2, '0'),
                                 isDark: isDark,
                                 borderColor: borderColor,
@@ -99,7 +100,7 @@ class BirthdayScreen extends GetView<SignupController> {
                             // DD
                             Expanded(
                               child: _DateBox(
-                                label: 'DD',
+                                label: 'dd'.tr,
                                 value: dob?.day.toString().padLeft(2, '0'),
                                 isDark: isDark,
                                 borderColor: borderColor,
@@ -111,7 +112,7 @@ class BirthdayScreen extends GetView<SignupController> {
                             Expanded(
                               flex: 2,
                               child: _DateBox(
-                                label: 'YYYY',
+                                label: 'yyyy'.tr,
                                 value: dob?.year.toString(),
                                 isDark: isDark,
                                 borderColor: borderColor,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -35,7 +36,7 @@ class HobbiesInterestsScreen extends GetView<SignupController> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
-        isDark ? AppColors.backgroundDark : const Color(0xFFFFF8F0);
+        isDark ? AppColors.backgroundDark : Colors.white;
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
@@ -98,7 +99,7 @@ class HobbiesInterestsScreen extends GetView<SignupController> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                entry.key,
+                                entry.key.tr,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -154,7 +155,7 @@ class HobbiesInterestsScreen extends GetView<SignupController> {
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            item.name,
+                                            item.name.tr,
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,

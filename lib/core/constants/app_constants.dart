@@ -13,6 +13,7 @@ class AppConstants {
   static const String themeKey = 'theme_mode';
   static const String localeKey = 'locale';
   static const String firstLaunchKey = 'first_launch';
+  static const String signupDraftKey = 'signup_draft';
 
   // Signup Steps
   static const int signupTotalSteps = 11;

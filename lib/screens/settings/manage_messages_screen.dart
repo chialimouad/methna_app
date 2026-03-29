@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/settings_controller.dart';
-import 'package:methna_app/app/data/services/storage_service.dart';
+
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -17,9 +17,10 @@ class ManageMessagesScreen extends GetView<SettingsController> {
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    final storage = Get.find<StorageService>();
-    final receiveDMs = RxBool(storage.getBool('chat_receive_dms') ?? true);
-    final readReceipts = RxBool(storage.getBool('chat_read_receipts') ?? true);
+    final receiveDMs = controller.receiveDMs;
+    final readReceipts = controller.readReceipts;
+    final typingIndicator = controller.typingIndicator;
+    final autoDownloadMedia = controller.autoDownloadMedia;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -78,17 +79,13 @@ class ManageMessagesScreen extends GetView<SettingsController> {
                     textColor: textColor,
                     secondaryColor: secondaryColor,
                     onChanged: (v) {
-                      receiveDMs.value = v;
-                      storage.saveBool('chat_receive_dms', v);
-                      controller.updatePrivacy(showOnline: v);
+                      controller.updateChatSetting('receiveDMs', v);
                     },
                   ),
 
                   Divider(
                     height: 32,
-                    color: isDark
-                        ? AppColors.dividerDark
-                        : Colors.grey.shade200,
+                    color: isDark ? AppColors.dividerDark : Colors.grey.shade200,
                   ),
 
                   // Read Receipts
@@ -99,16 +96,47 @@ class ManageMessagesScreen extends GetView<SettingsController> {
                     textColor: textColor,
                     secondaryColor: secondaryColor,
                     onChanged: (v) {
-                      readReceipts.value = v;
-                      storage.saveBool('chat_read_receipts', v);
+                      controller.updateChatSetting('readReceipts', v);
                     },
                   ),
 
                   Divider(
                     height: 32,
-                    color: isDark
-                        ? AppColors.dividerDark
-                        : Colors.grey.shade200,
+                    color: isDark ? AppColors.dividerDark : Colors.grey.shade200,
+                  ),
+
+                  // Typing Indicator
+                  _ToggleSection(
+                    title: 'Typing Indicator', // using english fallback
+                    subtitle: 'Show when you are typing a message',
+                    rxValue: typingIndicator,
+                    textColor: textColor,
+                    secondaryColor: secondaryColor,
+                    onChanged: (v) {
+                      controller.updateChatSetting('typingIndicator', v);
+                    },
+                  ),
+
+                  Divider(
+                    height: 32,
+                    color: isDark ? AppColors.dividerDark : Colors.grey.shade200,
+                  ),
+
+                  // Auto Download Media
+                  _ToggleSection(
+                    title: 'Auto-Download Media',
+                    subtitle: 'Automatically download photos and voice messages when received',
+                    rxValue: autoDownloadMedia,
+                    textColor: textColor,
+                    secondaryColor: secondaryColor,
+                    onChanged: (v) {
+                      controller.updateChatSetting('autoDownloadMedia', v);
+                    },
+                  ),
+
+                  Divider(
+                    height: 32,
+                    color: isDark ? AppColors.dividerDark : Colors.grey.shade200,
                   ),
 
                   // Notification toggles for messages

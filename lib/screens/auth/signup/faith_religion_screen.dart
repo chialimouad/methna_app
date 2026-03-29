@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/app/controllers/signup_data.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 
 class FaithReligionScreen extends GetView<SignupController> {
   const FaithReligionScreen({super.key});
@@ -10,485 +11,247 @@ class FaithReligionScreen extends GetView<SignupController> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor =
-        isDark ? AppColors.backgroundDark : const Color(0xFFFFF8F0);
-    final secondaryColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final bgColor = isDark ? AppColors.backgroundDark : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : Colors.white;
+    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            // ── Top bar: back arrow + progress ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Row(
-                children: [
-                  _BackArrow(isDark: isDark),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Obx(() => _ProgressBar(
-                          progress: controller.progressPercent,
-                        )),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Scrollable content ──
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Row(
                   children: [
-                    const SizedBox(height: 28),
-
-                    // Title
-                    Text(
-                      'faith_religion'.tr,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_ios, color: textColor, size: 20),
+                      onPressed: () => controller.goBack(),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'faith_and_religion'.tr,
+                            style:  TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'tell_us_about_your_faith'.tr,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: textColor.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Religious Sect & Prayers side by side ──
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Religious Sect (radio buttons)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text('☪️ ',
-                                      style: TextStyle(fontSize: 14)),
-                                  Text(
-                                    'select_sect'.tr,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Obx(() => Column(
-                                    children: [
-                                      'Sunni',
-                                      'Shia',
-                                      'Just Muslim'
-                                    ].map((sect) {
-                                      final selected =
-                                          controller.selectedSect.value ==
-                                              sect;
-                                      return GestureDetector(
-                                        onTap: () => controller
-                                            .selectedSect.value = sect,
-                                        child: Padding(
-                                          padding:
-                                              const EdgeInsets.only(
-                                                  bottom: 10),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 20,
-                                                height: 20,
-                                                decoration: BoxDecoration(
-                                                  shape:
-                                                      BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: selected
-                                                        ? AppColors
-                                                            .primary
-                                                        : secondaryColor,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                child: selected
-                                                    ? Center(
-                                                        child:
-                                                            Container(
-                                                          width: 10,
-                                                          height: 10,
-                                                          decoration:
-                                                              const BoxDecoration(
-                                                            shape: BoxShape
-                                                                .circle,
-                                                            color: AppColors
-                                                                .primary,
-                                                          ),
-                                                        ),
-                                                      )
-                                                    : null,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                sect,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: textColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  )),
-                            ],
-                          ),
-                        ),
-
-                        // Prayers (pill buttons)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text('🤲 ',
-                                      style: TextStyle(fontSize: 14)),
-                                  Text(
-                                    'prayer_frequency'.tr,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Obx(() => Column(
-                                    children: [
-                                      'Always',
-                                      'Usually',
-                                      'Sometimes',
-                                      'Never'
-                                    ].map((prayer) {
-                                      final selected = controller
-                                              .selectedPrayerFrequency
-                                              .value ==
-                                          prayer;
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(
-                                                bottom: 8),
-                                        child: GestureDetector(
-                                          onTap: () => controller
-                                              .selectedPrayerFrequency
-                                              .value = prayer,
-                                          child: AnimatedContainer(
-                                            duration:
-                                                const Duration(
-                                                    milliseconds:
-                                                        200),
-                                            width: double.infinity,
-                                            padding:
-                                                const EdgeInsets
-                                                    .symmetric(
-                                                    vertical: 10),
-                                            decoration: BoxDecoration(
-                                              color: selected
-                                                  ? AppColors.primary
-                                                  : Colors
-                                                      .transparent,
-                                              borderRadius:
-                                                  BorderRadius
-                                                      .circular(20),
-                                              border: Border.all(
-                                                color: selected
-                                                    ? AppColors
-                                                        .primary
-                                                    : (isDark
-                                                        ? AppColors
-                                                            .borderDark
-                                                        : AppColors
-                                                            .borderLight),
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                prayer,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight:
-                                                      FontWeight
-                                                          .w600,
-                                                  color: selected
-                                                      ? Colors
-                                                          .white
-                                                      : textColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // ── Marriage Timeline ──
-                    Row(
-                      children: [
-                        Text('💍 ', style: TextStyle(fontSize: 14)),
-                        Text(
-                          'Marriage Timeline',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Obx(() => Row(
-                          children: [
-                            '1-3 MONTHS',
-                            '3-6 MONTHS',
-                            'UP TO 1 YEAR'
-                          ].map((timeline) {
-                            final selected = controller
-                                    .selectedMarriageTimeline.value ==
-                                timeline;
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () => controller
-                                    .selectedMarriageTimeline
-                                    .value = timeline,
-                                child: Container(
-                                  margin: EdgeInsets.only(
-                                      right: timeline != 'UP TO 1 YEAR'
-                                          ? 8
-                                          : 0),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? AppColors.primary
-                                        : Colors.transparent,
-                                    borderRadius:
-                                        BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: selected
-                                          ? AppColors.primary
-                                          : (isDark
-                                              ? AppColors.borderDark
-                                              : AppColors.borderLight),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      timeline,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: selected
-                                            ? Colors.white
-                                            : secondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        )),
-
-                    const SizedBox(height: 28),
-
-                    // ── Lifestyle & Diet ──
-                    Row(
-                      children: [
-                        Text('🍃 ', style: TextStyle(fontSize: 14)),
-                        Text(
-                          'Lifestyle & Diet',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Halal Diet toggle
-                    Obx(() => _ToggleRow(
-                          label: 'Halal Diet',
-                          subtitle: 'Strictly follows',
-                          value: controller.halalDiet.value,
-                          onChanged: (v) =>
-                              controller.halalDiet.value = v,
-                          isDark: isDark,
-                          textColor: textColor,
-                          secondaryColor: secondaryColor,
-                        )),
-                    const SizedBox(height: 12),
-
-                    // Non-Smoker toggle
-                    Obx(() => _ToggleRow(
-                          label: 'Non-Smoker',
-                          subtitle: 'No tobacco',
-                          value: controller.nonSmoker.value,
-                          onChanged: (v) =>
-                              controller.nonSmoker.value = v,
-                          isDark: isDark,
-                          textColor: textColor,
-                          secondaryColor: secondaryColor,
-                        )),
-
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-            ),
 
-            // ── Bottom: Continue button ──
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: controller.goToNextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: Text(
-                    'continue_text'.tr,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      _buildSection(
+                        title: 'sect'.tr,
+                        icon: Icons.mosque,
+                        options: SignupData.sects,
+                        selectedOption: controller.selectedSect,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSection(
+                        title: 'religious_level'.tr,
+                        icon: Icons.auto_awesome,
+                        options: SignupData.religiousLevels,
+                        selectedOption: controller.selectedReligiousLevel,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSection(
+                        title: 'prayer_frequency'.tr,
+                        icon: Icons.query_builder,
+                        options: SignupData.prayerFrequencies,
+                        selectedOption: controller.selectedPrayerFrequency,
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Diet & Smoking
+                      _buildSection(
+                        title: 'dietary_preference'.tr,
+                        icon: Icons.restaurant,
+                        options: SignupData.dietaryPreferences,
+                        selectedOption: controller.selectedDietary,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSection(
+                        title: 'alcohol_usage'.tr,
+                        icon: Icons.local_drink,
+                        options: SignupData.alcoholPreferences,
+                        selectedOption: controller.selectedAlcohol,
+                      ),
+                      const SizedBox(height: 20),
+                      Obx(() => controller.selectedGender.value.toLowerCase() == 'female' 
+                        ? Column(
+                            children: [
+                              _buildSection(
+                                title: 'hijab_status'.tr,
+                                icon: Icons.face_2,
+                                options: SignupData.hijabStatuses,
+                                selectedOption: controller.selectedHijab,
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+                          )
+                        : const SizedBox.shrink()
+                      ),
+
+                      // Continue Button
+                      ElevatedButton(
+                        onPressed: () => controller.navigateTo(AppRoutes.signupHobbies),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 8,
+                          shadowColor: AppColors.primary.withValues(alpha: 0.5),
+                        ),
+                        child: Text(
+                          'continue'.tr,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      );
+    
+  }
+
+  Widget _buildSection({
+    required String title,
+    required IconData icon,
+    required List<String> options,
+    required RxString selectedOption,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Obx(() => Column(
+                children: options.map((option) {
+                  final selected = selectedOption.value == option;
+                  return GestureDetector(
+                    onTap: () => selectedOption.value = option,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: selected ? AppColors.primary : (Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.borderDark : AppColors.borderLight),
+                                width: 2,
+                              ),
+                            ),
+                            child: selected?
+                                     Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppColors.primary,
+                                      ),
+                                    )
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            option.tr,
+                            style: TextStyle(
+                              fontSize: 15, 
+                              color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              )),
+        ],
       ),
     );
   }
-}
 
-// ─── Toggle row ───────────────────────────────────────────────────────────
-class _ToggleRow extends StatelessWidget {
-  final String label;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final bool isDark;
-  final Color textColor;
-  final Color secondaryColor;
-
-  const _ToggleRow({
-    required this.label,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-    required this.isDark,
-    required this.textColor,
-    required this.secondaryColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSwitchRow({
+    required String title,
+    required IconData icon,
+    required RxBool value,
+  }) {
     return Row(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: textColor)),
-            Text(subtitle,
-                style: TextStyle(fontSize: 11, color: secondaryColor)),
-          ],
-        ),
-        const Spacer(),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.primary,
-          activeTrackColor: AppColors.primary.withValues(alpha: 0.3),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Progress bar ─────────────────────────────────────────────────────────
-class _ProgressBar extends StatelessWidget {
-  final double progress;
-  const _ProgressBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: LinearProgressIndicator(
-        value: progress,
-        minHeight: 6,
-        backgroundColor: Colors.grey.shade200,
-        valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-      ),
-    );
-  }
-}
-
-// ─── Reusable back arrow ──────────────────────────────────────────────────
-class _BackArrow extends StatelessWidget {
-  final bool isDark;
-  const _BackArrow({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Get.find<SignupController>().goBack(),
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        Icon(icon, color: AppColors.primary, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15, 
+              color: Theme.of(Get.context!).brightness == Brightness.dark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight
+            ),
           ),
-          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          LucideIcons.chevronLeft,
-          size: 16,
-          color: isDark
-              ? AppColors.textPrimaryDark
-              : AppColors.textPrimaryLight,
-        ),
-      ),
+        Obx(() => Switch(
+              value: value.value,
+              onChanged: (val) => value.value = val,
+              activeThumbColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.3),
+            )),
+      ],
     );
   }
 }

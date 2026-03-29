@@ -8,10 +8,13 @@ import 'package:methna_app/app/controllers/signup_controller.dart';
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => LoginController());
-    Get.lazyPut(() => ForgotPasswordController());
-    Get.lazyPut(() => OtpController());
-    Get.lazyPut(() => ResetPasswordController());
-    Get.put(SignupController());
+    Get.lazyPut(() => LoginController(), fenix: true);
+    Get.lazyPut(() => ForgotPasswordController(), fenix: true);
+    Get.lazyPut(() => OtpController(), fenix: true);
+    Get.lazyPut(() => ResetPasswordController(), fenix: true);
+    // permanent: survives navigation across all signup screens
+    if (!Get.isRegistered<SignupController>()) {
+      Get.put(SignupController(), permanent: true);
+    }
   }
 }

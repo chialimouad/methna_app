@@ -385,6 +385,7 @@ class FilterScreen extends GetView<HomeController> {
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () {
+                            controller.saveFilters();
                             controller.fetchDiscoverUsers();
                             Get.back();
                           },
@@ -412,6 +413,9 @@ class FilterScreen extends GetView<HomeController> {
                             controller.maxDistance.value = 50;
                             controller.educationFilter.value = '';
                             controller.religiousLevelFilter.value = '';
+                            controller.prayerFrequencyFilter.value = '';
+                            controller.marriageIntentionFilter.value = '';
+                            controller.livingSituationFilter.value = '';
                             controller.interestsFilter.clear();
                             controller.verifiedOnlyFilter.value = false;
                             controller.goGlobalFilter.value = false;
@@ -472,6 +476,36 @@ class FilterScreen extends GetView<HomeController> {
       case 'religious': return 'Religious';
       case 'moderate': return 'Moderate';
       case 'not_religious': return 'Not Religious';
+      default: return 'Any';
+    }
+  }
+
+  String _prayerLabel(String value) {
+    switch (value) {
+      case 'actively_practicing': return 'Actively Practicing';
+      case 'occasionally': return 'Occasionally';
+      case 'not_practicing': return 'Not Practicing';
+      default: return 'Any';
+    }
+  }
+
+  String _intentionLabel(String value) {
+    switch (value) {
+      case 'within_months': return 'Within Months';
+      case 'within_year': return 'Within a Year';
+      case 'one_to_two_years': return '1-2 Years';
+      case 'not_sure': return 'Not Sure';
+      case 'just_exploring': return 'Just Exploring';
+      default: return 'Any';
+    }
+  }
+
+  String _livingSituationLabel(String value) {
+    switch (value) {
+      case 'alone': return 'Alone';
+      case 'with_family': return 'With Family';
+      case 'with_roommates': return 'With Roommates';
+      case 'with_spouse': return 'With Spouse';
       default: return 'Any';
     }
   }
@@ -621,6 +655,57 @@ class FilterScreen extends GetView<HomeController> {
               labels: ['Any', 'Very Religious', 'Religious', 'Moderate', 'Not Religious'],
               current: controller.religiousLevelFilter.value,
               onSelect: (v) => controller.religiousLevelFilter.value = v,
+            ) : null,
+          ),
+          _divider(isDark),
+          _SettingRow(
+            title: 'Prayer Level',
+            trailing: Text(
+              _prayerLabel(controller.prayerFrequencyFilter.value),
+              style: TextStyle(fontSize: 14, color: secondaryColor),
+            ),
+            textColor: textColor,
+            secondaryColor: secondaryColor,
+            onTap: hasAdvanced ? () => _showOptionPicker(
+              context, isDark, 'Prayer Level',
+              options: ['', 'actively_practicing', 'occasionally', 'not_practicing'],
+              labels: ['Any', 'Actively Practicing', 'Occasionally', 'Not Practicing'],
+              current: controller.prayerFrequencyFilter.value,
+              onSelect: (v) => controller.prayerFrequencyFilter.value = v,
+            ) : null,
+          ),
+          _divider(isDark),
+          _SettingRow(
+            title: 'Marriage Intention',
+            trailing: Text(
+              _intentionLabel(controller.marriageIntentionFilter.value),
+              style: TextStyle(fontSize: 14, color: secondaryColor),
+            ),
+            textColor: textColor,
+            secondaryColor: secondaryColor,
+            onTap: hasAdvanced ? () => _showOptionPicker(
+              context, isDark, 'Marriage Intention',
+              options: ['', 'within_months', 'within_year', 'one_to_two_years', 'not_sure', 'just_exploring'],
+              labels: ['Any', 'Within Months', 'Within a Year', '1-2 Years', 'Not Sure', 'Just Exploring'],
+              current: controller.marriageIntentionFilter.value,
+              onSelect: (v) => controller.marriageIntentionFilter.value = v,
+            ) : null,
+          ),
+          _divider(isDark),
+          _SettingRow(
+            title: 'Living Situation',
+            trailing: Text(
+              _livingSituationLabel(controller.livingSituationFilter.value),
+              style: TextStyle(fontSize: 14, color: secondaryColor),
+            ),
+            textColor: textColor,
+            secondaryColor: secondaryColor,
+            onTap: hasAdvanced ? () => _showOptionPicker(
+              context, isDark, 'Living Situation',
+              options: ['', 'alone', 'with_family', 'with_roommates', 'with_spouse'],
+              labels: ['Any', 'Alone', 'With Family', 'With Roommates', 'With Spouse'],
+              current: controller.livingSituationFilter.value,
+              onSelect: (v) => controller.livingSituationFilter.value = v,
             ) : null,
           ),
           _divider(isDark),

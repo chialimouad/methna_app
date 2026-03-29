@@ -57,8 +57,11 @@ class OnboardingController extends GetxController {
   void skipOnboarding() => completeOnboarding();
 
   Future<void> completeOnboarding() async {
+    debugPrint('[Onboarding] completeOnboarding called');
     await _storage.setOnboardingDone();
     await _storage.setFirstLaunch(false);
+    debugPrint('[Onboarding] isFirstLaunch after set: ${_storage.isFirstLaunch}');
+    debugPrint('[Onboarding] isOnboardingDone after set: ${_storage.isOnboardingDone}');
     Get.offAllNamed(AppRoutes.login);
   }
 

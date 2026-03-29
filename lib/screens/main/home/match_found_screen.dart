@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:methna_app/app/data/models/user_model.dart';
+import 'package:methna_app/app/data/models/conversation_model.dart';
 import 'package:methna_app/app/data/services/auth_service.dart';
+import 'package:methna_app/app/data/services/api_service.dart';
+import 'package:methna_app/app/controllers/navigation_controller.dart';
+import 'package:methna_app/app/controllers/chat_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -62,6 +66,39 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
     _pulseCtrl.dispose();
     _confettiCtrl.dispose();
     super.dispose();
+  }
+
+  // Create a new conversation with the matched user
+  Future<void> _createAndOpenConversation(UserModel matchedUser) async {
+    try {
+      final chatController = Get.find<ChatController>();
+      final api = Get.find<ApiService>();
+      
+      // Create conversation via API
+      final response = await api.post('/api/v1/chat/conversations', data: {
+        'participantId': matchedUser.id,
+      });
+      
+      if (response.data != null) {
+        // Parse the new conversation
+        final conversationData = response.data;
+        final currentUserId = Get.find<AuthService>().userId;
+        final newConversation = ConversationModel.fromJson(
+          conversationData,
+          currentUserId: currentUserId,
+        );
+        
+        // Add to conversations list
+        chatController.conversations.insert(0, newConversation);
+        
+        // Open the new conversation
+        await chatController.openConversation(newConversation);
+      }
+    } catch (e) {
+      debugPrint('[MatchFound] Failed to create conversation: $e');
+      // Re-throw to let the caller handle the fallback
+      rethrow;
+    }
   }
 
   @override
@@ -246,13 +283,42 @@ class _MatchFoundScreenState extends State<MatchFoundScreen>
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
+                            // Close match screen first
                             Get.back();
+                            
+                            // Find or create conversation with matched user
                             if (matchedUser != null) {
-                              // We navigate back to the main layout for now
-                              // Users can select the chat tab from there.
-                              Get.until((route) => Get.currentRoute == '/main');
-                              Get.snackbar('Match', 'Go to your Chats tab to message ${matchedUser.firstName}');
+                              try {
+                                final chatController = Get.find<ChatController>();
+                                
+                                // Refresh conversations to get the latest
+                                await chatController.fetchConversations();
+                                
+                                // Find existing conversation with this user
+                                final existingConv = chatController.conversations.firstWhereOrNull(
+                                  (conv) => conv.otherUser?.id == matchedUser.id,
+                                );
+                                
+                                if (existingConv != null) {
+                                  // Open existing conversation
+                                  await chatController.openConversation(existingConv);
+                                } else {
+                                  // Create new conversation
+                                  await _createAndOpenConversation(matchedUser);
+                                }
+                                
+                                // Navigate to chat tab
+                                if (Get.isRegistered<NavigationController>()) {
+                                  Get.find<NavigationController>().goToChat();
+                                }
+                              } catch (e) {
+                                debugPrint('[MatchFound] Error opening conversation: $e');
+                                // Fallback: just navigate to chat tab
+                                if (Get.isRegistered<NavigationController>()) {
+                                  Get.find<NavigationController>().goToChat();
+                                }
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(

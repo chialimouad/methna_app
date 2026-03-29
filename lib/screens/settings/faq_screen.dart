@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:methna_app/app/controllers/settings_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-class FaqScreen extends StatelessWidget {
+class FaqScreen extends GetView<SettingsController> {
   const FaqScreen({super.key});
-
-  static const _purple = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -17,36 +17,12 @@ class FaqScreen extends StatelessWidget {
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    final selectedTab = 0.obs;
-    final tabs = ['General', 'Account', 'Dating', 'Subscription'];
+    final searchQuery = ''.obs;
 
-    final faqItems = <_FaqData>[
-      _FaqData(
-        question: 'What is Datify?',
-        answer:
-            'Datify is a dating app designed to help you meet new people, make meaningful connections, and find potential matches based on your interests and preferences.',
-      ),
-      _FaqData(
-        question: 'How do I create a Datify account?',
-        answer: '',
-      ),
-      _FaqData(
-        question: 'Is Datify free to use?',
-        answer: '',
-      ),
-      _FaqData(
-        question: 'How does matching work on Datify?',
-        answer: '',
-      ),
-      _FaqData(
-        question: 'Can I change my location on Datify?',
-        answer: '',
-      ),
-      _FaqData(
-        question: 'How do I report a user or profile?',
-        answer: '',
-      ),
-    ];
+    // Fetch FAQ content from backend on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchFaqContent();
+    });
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -90,83 +66,37 @@ class FaqScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 16),
-
-            // ── Tab bar ──
-            SizedBox(
-              height: 36,
-              child: Obx(() => ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: tabs.length,
-                    separatorBuilder: (_, i) =>
-                        const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final isActive = selectedTab.value == index;
-                      return GestureDetector(
-                        onTap: () => selectedTab.value = index,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? _purple
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(18),
-                            border: isActive
-                                ? null
-                                : Border.all(
-                                    color: isDark
-                                        ? AppColors.borderDark
-                                        : Colors.grey.shade300,
-                                  ),
-                          ),
-                          child: Text(
-                            tabs[index],
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isActive
-                                  ? Colors.white
-                                  : textColor,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  )),
-            ),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // ── Search bar ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                height: 44,
+                height: 52,
                 decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isDark
                         ? AppColors.borderDark
-                        : Colors.grey.shade300,
+                        : Colors.grey.shade200,
                   ),
-                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Icon(LucideIcons.search,
                         size: 20, color: Colors.grey.shade400),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
+                        onChanged: (val) => searchQuery.value = val,
                         style: TextStyle(
-                            fontSize: 14, color: textColor),
+                            fontSize: 15, color: textColor),
                         decoration: InputDecoration(
-                          hintText: 'search'.tr,
+                          hintText: 'Search FAQs...',
                           hintStyle: TextStyle(
-                              fontSize: 14,
+                              fontSize: 15,
                               color: Colors.grey.shade400),
                           border: InputBorder.none,
                           isDense: true,
@@ -179,23 +109,58 @@ class FaqScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
 
             // ── FAQ list ──
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: faqItems.length,
-                itemBuilder: (context, index) {
-                  return _FaqTile(
-                    data: faqItems[index],
-                    textColor: textColor,
-                    secondaryColor: secondaryColor,
-                    isDark: isDark,
-                    initiallyExpanded: index == 0,
+              child: Obx(() {
+                if (controller.isLoadingFaq.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   );
-                },
-              ),
+                }
+
+                final items = controller.faqItems
+                    .where((item) {
+                      final q = (item['question'] ?? '').toString().toLowerCase();
+                      final a = (item['answer'] ?? '').toString().toLowerCase();
+                      final query = searchQuery.value.toLowerCase();
+                      return q.contains(query) || a.contains(query);
+                    })
+                    .toList();
+
+                if (items.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.helpCircle, size: 48, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No FAQs found',
+                          style: TextStyle(fontSize: 16, color: secondaryColor),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return _FaqTile(
+                      question: item['question']?.toString() ?? '',
+                      answer: item['answer']?.toString() ?? '',
+                      textColor: textColor,
+                      secondaryColor: secondaryColor,
+                      isDark: isDark,
+                      initiallyExpanded: index == 0,
+                    ).animate().fadeIn(duration: 300.ms, delay: (index * 50).ms).slideX(begin: 0.05, end: 0);
+                  },
+                );
+              }),
             ),
           ],
         ),
@@ -204,22 +169,18 @@ class FaqScreen extends StatelessWidget {
   }
 }
 
-class _FaqData {
+// ─── FAQ expandable tile ────────────────────────────────────────────────────────────────
+class _FaqTile extends StatefulWidget {
   final String question;
   final String answer;
-  _FaqData({required this.question, required this.answer});
-}
-
-// ─── FAQ expandable tile ──────────────────────────────────────────────────
-class _FaqTile extends StatefulWidget {
-  final _FaqData data;
   final Color textColor;
   final Color secondaryColor;
   final bool isDark;
   final bool initiallyExpanded;
 
   const _FaqTile({
-    required this.data,
+    required this.question,
+    required this.answer,
     required this.textColor,
     required this.secondaryColor,
     required this.isDark,
@@ -230,76 +191,149 @@ class _FaqTile extends StatefulWidget {
   State<_FaqTile> createState() => _FaqTileState();
 }
 
-class _FaqTileState extends State<_FaqTile> {
+class _FaqTileState extends State<_FaqTile> with SingleTickerProviderStateMixin {
   late bool _expanded;
+  late AnimationController _animController;
+  late Animation<double> _heightFactor;
 
   @override
   void initState() {
     super.initState();
     _expanded = widget.initiallyExpanded;
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+    _heightFactor = _animController.drive(CurveTween(curve: Curves.easeInOut));
+    if (_expanded) _animController.value = 1.0;
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _expanded = !_expanded;
+      if (_expanded) {
+        _animController.forward();
+      } else {
+        _animController.reverse();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _expanded = !_expanded),
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.data.question,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: widget.textColor,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: widget.isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _expanded
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : (widget.isDark ? AppColors.borderDark : Colors.grey.shade200),
+        ),
+        boxShadow: _expanded
+            ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 4))]
+            : null,
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: _expanded ? 0.15 : 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      LucideIcons.helpCircle,
+                      size: 18,
+                      color: _expanded ? AppColors.primary : Colors.grey.shade500,
                     ),
                   ),
-                ),
-                AnimatedRotation(
-                  turns: _expanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    LucideIcons.chevronDown,
-                    size: 22,
-                    color: Colors.grey.shade500,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.question,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: _expanded ? FontWeight.w700 : FontWeight.w600,
+                        color: widget.textColor,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: _expanded
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        LucideIcons.chevronDown,
+                        size: 16,
+                        color: _expanded ? AppColors.primary : Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        AnimatedCrossFade(
-          firstChild: const SizedBox(width: double.infinity),
-          secondChild: widget.data.answer.isNotEmpty
-              ? Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Text(
-                    widget.data.answer,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.5,
-                      color: widget.secondaryColor,
+          AnimatedBuilder(
+            animation: _animController,
+            builder: (context, child) {
+              return ClipRect(
+                child: Align(
+                  heightFactor: _heightFactor.value,
+                  alignment: Alignment.topCenter,
+                  child: child,
+                ),
+              );
+            },
+            child: widget.answer.isNotEmpty
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: widget.isDark
+                            ? Colors.white.withValues(alpha: 0.03)
+                            : AppColors.primary.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        widget.answer,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: widget.secondaryColor,
+                        ),
+                      ),
                     ),
-                  ),
-                )
-              : const SizedBox(width: double.infinity),
-          crossFadeState: _expanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 200),
-        ),
-        Divider(
-          height: 1,
-          color: widget.isDark
-              ? AppColors.dividerDark
-              : Colors.grey.shade200,
-        ),
-      ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }

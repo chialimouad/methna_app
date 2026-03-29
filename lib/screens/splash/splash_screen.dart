@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:methna_app/app/controllers/splash_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/constants/app_constants.dart';
@@ -24,9 +25,9 @@ class _SplashScreenState extends State<SplashScreen>
     controller = Get.put(SplashController());
     _heartsController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 10),
     )..repeat();
-    _hearts = List.generate(12, (_) => _FloatingHeart.random());
+    _hearts = List.generate(15, (_) => _FloatingHeart.random());
   }
 
   @override
@@ -44,14 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE8396B),
-              Color(0xFFC2185B),
-            ],
-          ),
+          color: Colors.white,
         ),
         child: Stack(
           children: [
@@ -75,74 +69,79 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Spacer(flex: 4),
+                    const Spacer(flex: 5),
 
-                    // Logo icon — speech bubble with heart
+                    // Logo Icon (Asset)
+                    Obx(() => AnimatedOpacity(
+                          opacity: controller.showLogo.value ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 1000),
+                          child: AnimatedScale(
+                            scale: controller.showLogo.value ? 1.0 : 0.5,
+                            duration: const Duration(milliseconds: 1200),
+                            curve: Curves.elasticOut,
+                            child: Hero(
+                              tag: 'app_logo',
+                              child: Image.asset(
+                                'assets/images/splash_logo_transparent.png',
+                                width: 140,
+                                height: 140,
+                              ),
+                            ),
+                          ),
+                        )),
+
+                    const SizedBox(height: 12),
+
+                    // App Name (Outfit Font)
                     Obx(() => AnimatedOpacity(
                           opacity: controller.showLogo.value ? 1.0 : 0.0,
                           duration: const Duration(milliseconds: 800),
-                          child: AnimatedScale(
-                            scale: controller.showLogo.value ? 1.0 : 0.3,
-                            duration: const Duration(milliseconds: 900),
-                            curve: Curves.elasticOut,
-                            child: SizedBox(
-                              width: 120,
-                              height: 120,
-                              child: CustomPaint(
-                                painter: _LogoPainter(),
-                              ),
-                            ),
-                          ),
-                        )),
-
-                    const SizedBox(height: 28),
-
-                    // App name
-                    Obx(() => AnimatedOpacity(
-                          opacity: controller.showLogo.value ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 600),
                           child: AnimatedSlide(
                             offset: controller.showLogo.value
                                 ? Offset.zero
-                                : const Offset(0, 0.4),
-                            duration: const Duration(milliseconds: 700),
-                            curve: Curves.easeOutCubic,
+                                : const Offset(0, 0.2),
+                            duration: const Duration(milliseconds: 900),
+                            curve: Curves.easeOutBack,
                             child: Text(
                               AppConstants.appName,
-                              style: const TextStyle(
-                                fontSize: 40,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 1.5,
+                              style: GoogleFonts.outfit(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                                letterSpacing: -0.5,
                               ),
                             ),
                           ),
                         )),
 
-                    const Spacer(flex: 4),
+                    const Spacer(flex: 5),
 
-                    // Circular progress indicator
+                    // Modern Loader
                     Obx(() => AnimatedOpacity(
                           opacity:
-                              controller.animationProgress.value > 0 ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 400),
-                          child: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: CircularProgressIndicator(
-                              value: controller.animationProgress.value < 1.0
-                                  ? null
-                                  : 1.0,
-                              strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation(
-                                Colors.white.withValues(alpha: 0.9),
+                              controller.animationProgress.value > 0 ? 0.8 : 0.0,
+                          duration: const Duration(milliseconds: 600),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 2),
+                                ),
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                                  backgroundColor: Colors.transparent,
+                                ),
                               ),
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                            ),
+                            ],
                           ),
                         )),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 60),
                   ],
                 ),
               ),
@@ -243,7 +242,7 @@ class _HeartsPainter extends CustomPainter {
       final y = ((h.startY + progress * h.speed) % 1.2) * size.height;
       final x = h.x * size.width + sin(progress * 2 * pi + h.startY * 6) * 20;
       final paint = Paint()
-        ..color = Colors.white.withValues(alpha: h.opacity)
+        ..color = AppColors.primary.withValues(alpha: h.opacity)
         ..style = PaintingStyle.fill;
 
       _drawSmallHeart(canvas, Offset(x, y), h.size, paint);

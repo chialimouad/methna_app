@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
-
+import 'package:get/get.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/app/controllers/settings_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 
-class StaticContentScreen extends StatelessWidget {
+class StaticContentScreen extends GetView<SettingsController> {
   final String title;
+  final String contentType;
 
-  const StaticContentScreen({super.key, required this.title});
+  const StaticContentScreen({
+    super.key,
+    required this.title,
+    required this.contentType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,39 +37,55 @@ class StaticContentScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'About $title',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: textColor,
+      body: FutureBuilder<String?>(
+        future: controller.fetchAppContent(contentType),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 3,
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'This is the native, completely localized in-app content specifically tailored for your app\'s $title. It functions as a placeholder since a native implementation was specifically requested to replace external web navigation.',
+            );
+          }
+
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.fileWarning, size: 64, color: AppColors.primary.withValues(alpha: 0.5)),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Content Unavailable',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'This content is currently being updated by our team. Please check back later.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: secondaryColor, height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              snapshot.data!,
               style: TextStyle(
                 fontSize: 15,
                 height: 1.6,
                 color: secondaryColor,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Methna App ensures that your privacy, security, and usage experience is seamless without leaving the application. Detailed native documentation and formatting can be rendered completely here natively without standard WebViews.',
-              style: TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: secondaryColor,
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

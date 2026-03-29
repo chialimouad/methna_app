@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/data/services/location_service.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -167,17 +169,18 @@ class EnableLocationScreen extends GetView<SignupController> {
                               locationService.isFetching.value)
                           ? null
                           : () async {
-                              if (controller.locationEnabled.value) {
-                                controller.completeSignup();
-                              } else {
+                              try {
                                 final pos = await locationService
                                     .requestLocationWithFeedback();
                                 if (pos != null) {
                                   controller.locationEnabled.value = true;
-                                  controller.completeSignup();
                                 }
-                                // If pos == null, the service already showed
-                                // a dialog/snackbar — user can retry.
+                                // Always proceed to complete signup
+                                await controller.completeSignup();
+                              } catch (e) {
+                                debugPrint('[Location] Error: $e');
+                                // Still try to complete signup even on error
+                                await controller.completeSignup();
                               }
                             },
                       style: ElevatedButton.styleFrom(
@@ -211,12 +214,12 @@ class EnableLocationScreen extends GetView<SignupController> {
             // ── Skip button (so user is never stuck) ──
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: TextButton(
-                onPressed: controller.isLoading.value
+              child: Obx(() => TextButton(
+                onPressed: (controller.isLoading.value || locationService.isFetching.value)
                     ? null
-                    : () {
+                    : () async {
                         controller.locationEnabled.value = false;
-                        controller.completeSignup();
+                        await controller.completeSignup();
                       },
                 child: Text(
                   'skip'.tr,
@@ -228,7 +231,7 @@ class EnableLocationScreen extends GetView<SignupController> {
                         : AppColors.textSecondaryLight,
                   ),
                 ),
-              ),
+              )),
             ),
           ],
         ),

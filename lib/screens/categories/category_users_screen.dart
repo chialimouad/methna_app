@@ -6,104 +6,194 @@ import 'package:methna_app/app/data/models/user_model.dart';
 import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
+import 'package:methna_app/core/utils/icon_helper.dart';
 import 'package:methna_app/core/widgets/animated_empty_state.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class CategoryUsersScreen extends GetView<CategoriesController> {
+class CategoryUsersScreen extends StatefulWidget {
   const CategoryUsersScreen({super.key});
+
+  @override
+  State<CategoryUsersScreen> createState() => _CategoryUsersScreenState();
+}
+
+class _CategoryUsersScreenState extends State<CategoryUsersScreen> {
+  late final CategoriesController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<CategoriesController>();
+    
+    final args = Get.arguments as Map<String, dynamic>?;
+    if (args != null && args['category'] != null) {
+      controller.selectCategory(args['category']);
+    } else {
+      Get.back();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.backgroundDark : Colors.white;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final bgColor = isDark ? AppColors.backgroundDark : const Color(0xFFFBF9FF);
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(LucideIcons.chevronLeft, color: textColor),
-          onPressed: () => Get.back(),
-        ),
-        title: Obx(() => Text(
-              controller.selectedCategory.value?.name ?? 'category'.tr,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            )),
-        centerTitle: true,
-      ),
       body: Obx(() {
-        if (controller.isLoadingUsers.value && controller.categoryUsers.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        final category = controller.selectedCategory.value;
+        if (category == null) return const Center(child: CircularProgressIndicator());
 
-        if (controller.categoryUsers.isEmpty) {
-          return AnimatedEmptyState(
-            lottieAsset: 'assets/animations/no_users.json',
-            title: 'no_users_in_category'.tr,
-            subtitle: 'no_users_in_category_desc'.tr,
-            fallbackIcon: LucideIcons.userX,
-          );
-        }
-
-        return NotificationListener<ScrollNotification>(
-          onNotification: (scroll) {
-            if (scroll.metrics.pixels > scroll.metrics.maxScrollExtent - 200) {
-              controller.loadMore();
-            }
-            return false;
-          },
-          child: GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.75,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: controller.categoryUsers.length +
-                (controller.hasMore.value ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= controller.categoryUsers.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ── PREMIUM SLIVER APP BAR ──
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true,
+              stretch: true,
+              backgroundColor: category.color != null 
+                  ? Color(int.parse(category.color!.replaceFirst('#', '0xFF'))) 
+                  : AppColors.primary,
+              leading: IconButton(
+                icon: Icon(Helpers.backIcon, color: Colors.white),
+                onPressed: () => Get.back(),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+                title: Text(
+                  category.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    shadows: [Shadow(color: Colors.black26, blurRadius: 10)],
                   ),
-                );
-              }
-              final user = controller.categoryUsers[index];
-              return _UserCard(
-                user: user,
-                isDark: isDark,
-                onTap: () => Get.toNamed(
-                  AppRoutes.userDetail,
-                  arguments: {'user': user},
                 ),
-              );
-            },
-          ),
+                centerTitle: false,
+                titlePadding: const EdgeInsetsDirectional.only(start: 60, bottom: 16),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Background Decorative Icon
+                    PositionedDirectional(
+                      end: -20, bottom: -20,
+                      child: Icon(
+                        IconHelper.getIcon(category.icon),
+                        size: 200,
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    // Gradient overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.3),
+                            Colors.black.withValues(alpha: 0.1),
+                            Colors.black.withValues(alpha: 0.5),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Category Info
+                    PositionedDirectional(
+                      start: 20, bottom: 50,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (category.description != null)
+                            SizedBox(
+                              width: Get.width * 0.7,
+                              child: Text(
+                                category.description!,
+                                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.3),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(LucideIcons.users, size: 12, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'members_count'.trParams({'count': '${category.userCount}'}),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── USERS GRID ──
+            if (controller.isLoadingUsers.value && controller.categoryUsers.isEmpty)
+              const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+            else if (controller.categoryUsers.isEmpty)
+              SliverFillRemaining(
+                child: AnimatedEmptyState(
+                  lottieAsset: 'assets/animations/no_users.json',
+                  title: 'no_users_in_category'.tr,
+                  subtitle: 'no_users_in_category_desc'.tr,
+                  fallbackIcon: LucideIcons.userX,
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.72,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index >= controller.categoryUsers.length) {
+                        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                      }
+                      final user = controller.categoryUsers[index];
+                      return _ProUserCard(
+                        user: user,
+                        isDark: isDark,
+                        onTap: () => Get.toNamed(AppRoutes.userDetail, arguments: {'user': user}),
+                      );
+                    },
+                    childCount: controller.categoryUsers.length + (controller.hasMore.value ? 1 : 0),
+                  ),
+                ),
+              ),
+            
+            const SliverToBoxAdapter(child: SizedBox(height: 50)),
+          ],
         );
       }),
     );
   }
 }
 
-class _UserCard extends StatelessWidget {
+class _ProUserCard extends StatelessWidget {
   final UserModel user;
   final bool isDark;
   final VoidCallback onTap;
 
-  const _UserCard({
-    required this.user,
-    required this.isDark,
-    required this.onTap,
-  });
+  const _ProUserCard({required this.user, required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -111,34 +201,34 @@ class _UserCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Photo
-              user.mainPhotoUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: user.mainPhotoUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(
-                        color: isDark ? AppColors.cardDark : AppColors.dividerLight,
-                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-                      errorWidget: (_, __, ___) => _Placeholder(user: user),
-                    )
-                  : _Placeholder(user: user),
+              // PHOTO
+              Hero(
+                tag: 'user_${user.id}',
+                child: user.mainPhotoUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: user.mainPhotoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: isDark ? AppColors.cardDark : Colors.grey[200]),
+                        errorWidget: (_, __, ___) => _Placeholder(user: user),
+                      )
+                    : _Placeholder(user: user),
+              ),
 
-              // Gradient
+              // OVERLAYS
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -146,44 +236,76 @@ class _UserCard extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
+                        Colors.black.withValues(alpha: 0.1),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.7),
+                        Colors.black.withValues(alpha: 0.8),
                       ],
-                      stops: const [0.5, 1.0],
+                      stops: const [0.0, 0.4, 1.0],
                     ),
                   ),
                 ),
               ),
 
-              // Verified badge
-              if (user.selfieVerified)
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.verified,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(LucideIcons.check, color: Colors.white, size: 10),
-                  ),
+              // TOP CHIPS
+              PositionedDirectional(
+                top: 10, start: 10, end: 10,
+                child: Row(
+                  children: [
+                    if (user.selfieVerified)
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: AppColors.verified, shape: BoxShape.circle),
+                        child: const Icon(LucideIcons.check, color: Colors.white, size: 10),
+                      ),
+                    const Spacer(),
+                    if (user.profile?.country != null)
+                      Text(
+                        Helpers.countryToEmoji(user.profile!.country!), 
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                  ],
                 ),
+              ),
 
-              // User info
-              Positioned(
-                bottom: 12,
-                left: 12,
-                right: 12,
-                child: Text(
-                  '${user.firstName ?? user.username ?? 'User'}, ${user.profile?.age ?? ''}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              // BOTTOM INFO
+              PositionedDirectional(
+                bottom: 12, start: 12, end: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${user.firstName ?? user.username ?? 'User'}',
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (user.profile?.age != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '${user.profile!.age}',
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w400),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(LucideIcons.mapPin, size: 10, color: Colors.white.withValues(alpha: 0.7)),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            user.profile?.city ?? 'Somewhere',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w500),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -201,15 +323,11 @@ class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.primarySurface,
+      color: AppColors.primary.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           Helpers.getInitials(user.firstName, user.lastName),
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
-          ),
+          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.primary),
         ),
       ),
     );

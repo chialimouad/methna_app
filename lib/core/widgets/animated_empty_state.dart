@@ -52,6 +52,8 @@ class AnimatedEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final resolvedTitleColor = titleColor ?? (isDark ? Colors.white : Colors.black87);
+    final resolvedSubtitleColor = subtitleColor ?? (isDark ? Colors.grey.shade400 : Colors.grey.shade600);
     
     return Center(
       child: Padding(
@@ -67,7 +69,7 @@ class AnimatedEmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: titleColor ?? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                color: resolvedTitleColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -76,7 +78,7 @@ class AnimatedEmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: subtitleColor ?? (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                color: resolvedSubtitleColor,
                 height: 1.5,
               ),
             ),

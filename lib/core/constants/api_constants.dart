@@ -2,6 +2,10 @@ class ApiConstants {
   ApiConstants._();
 
   // ─── Base URLs ──────────────────────────────────────────
+  // Local development (Android Emulator):
+  // static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  // static const String socketUrl = 'http://10.0.2.2:3000';
+  // Production (Railway):
   static const String baseUrl = 'https://jordan-backend-production.up.railway.app/api/v1';
   static const String socketUrl = 'https://jordan-backend-production.up.railway.app';
 
@@ -15,8 +19,8 @@ class ApiConstants {
   static const String forgotPassword = '/auth/forgot-password';
   static const String verifyResetOtp = '/auth/verify-reset-otp';
   static const String resetPassword = '/auth/reset-password';
-  static const String updateFcmToken = '/auth/fcm-token';
   static const String changePassword = '/auth/change-password';
+  static const String checkUsername = '/auth/check-username';
 
   // ─── Users ──────────────────────────────────────────────
   static const String usersMe = '/users/me';
@@ -39,6 +43,7 @@ class ApiConstants {
   // ─── Swipes ─────────────────────────────────────────────
   static const String swipe = '/swipes';
   static const String whoLikedMe = '/swipes/who-liked-me';
+  static const String interactions = '/swipes/interactions'; // Users who interacted with current user
   static String compatibility(String targetId) => '/swipes/compatibility/$targetId';
 
   // ─── Matches ────────────────────────────────────────────
@@ -119,6 +124,7 @@ class ApiConstants {
   static const String getPassport = '/monetization/passport';
 
   // ─── Payments ─────────────────────────────────────────
+  static const String stripePublishableKey = 'pk_test_TYooMQauvdEDq54NiTphI7jx'; // Replace or use flutter_dotenv
   static const String paymentPricing = '/payments/pricing';
   static const String paymentCreateIntent = '/payments/create-intent';
 
@@ -150,6 +156,7 @@ class ApiConstants {
 
   // ─── Chat – Image Messages ─────────────────────────────
   static const String sendImageMessage = '/chat/messages/image';
+  static const String sendVoiceMessage = '/chat/messages/voice';
 
   // ─── Categories ───────────────────────────────────────
   static const String categories = '/categories';
@@ -169,4 +176,27 @@ class ApiConstants {
 
   // ─── Daily Insights ─────────────────────────────────
   static const String dailyInsight = '/daily-insights/today';
+
+  // ─── App Content (Terms, Privacy, etc.) ─────────────
+  static String appContent(String type) => '/content/$type';
+  static const String allContent = '/content';
+
+  // ─── FAQ ─────────────────────────────────────────────
+  static const String faqs = '/content/faqs/list';
+
+  // ─── Jobs ────────────────────────────────────────────
+  static const String jobs = '/content/jobs/list';
+
+  // ─── Partners ────────────────────────────────────────
+  static const String partners = '/content/partners/list';
+
+  // ─── Feedback / My Reports ──────────────────────────
+  static const String myReports = '/reports/my-reports';
+
+  // ─── Chat Settings ─────────────────────────────────
+  static const String chatSettings = '/users/me/chat-settings';
+
+  // ─── User Settings ─────────────────────────────────
+  static const String securitySettings = '/users/me/security';
+  static const String privacySettings = '/profiles/privacy';
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/app/controllers/signup_data.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class ProfessionPersonalScreen extends GetView<SignupController> {
@@ -11,7 +13,7 @@ class ProfessionPersonalScreen extends GetView<SignupController> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor =
-        isDark ? AppColors.backgroundDark : const Color(0xFFFFF8F0);
+        isDark ? AppColors.backgroundDark : Colors.white;
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final textColor =
@@ -25,11 +27,11 @@ class ProfessionPersonalScreen extends GetView<SignupController> {
         child: Column(
           children: [
             // ── Top bar: back arrow + progress ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Row(
-                children: [
-                  _BackArrow(isDark: isDark),
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: Row(
+                  children: [
+                    _BackArrow(isDark: isDark),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Obx(() => _ProgressBar(
@@ -98,7 +100,7 @@ class ProfessionPersonalScreen extends GetView<SignupController> {
                                     controller.selectedEducation.value
                                             .isNotEmpty
                                         ? controller
-                                            .selectedEducation.value
+                                            .selectedEducation.value.tr
                                         : 'education'.tr,
                                     style: TextStyle(
                                       fontSize: 15,
@@ -196,8 +198,7 @@ class ProfessionPersonalScreen extends GetView<SignupController> {
                             style: TextStyle(
                                 fontSize: 14, color: textColor, height: 1.5),
                             decoration: InputDecoration(
-                              hintText:
-                                  'Share a bit about your journey and\nwhat you value in a partner...',
+                              hintText: 'bio_hint'.tr,
                               hintStyle: TextStyle(
                                   fontSize: 14,
                                   color: hintColor,
@@ -271,9 +272,9 @@ class ProfessionPersonalScreen extends GetView<SignupController> {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: controller.educationLevels.map((level) {
+          children: SignupData.educationLevels.map((level) {
             return ListTile(
-              title: Text(level),
+              title: Text(level.tr),
               onTap: () {
                 controller.selectedEducation.value = level;
                 Get.back();

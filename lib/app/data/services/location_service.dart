@@ -36,11 +36,15 @@ class LocationService extends GetxService {
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('GPS timeout'),
       );
       currentPosition.value = position;
       await _reverseGeocode(position);
       return position;
     } catch (e) {
+      debugPrint('[LocationService] getCurrentPosition error: $e');
       return null;
     }
   }

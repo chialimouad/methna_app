@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/app/controllers/signup_data.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class MaritalStatusScreen extends GetView<SignupController> {
@@ -59,7 +61,7 @@ class MaritalStatusScreen extends GetView<SignupController> {
                     // ── Pill options ──
                     Obx(() => Column(
                           children:
-                              controller.maritalStatuses.map((status) {
+                              SignupData.maritalStatuses.map((status) {
                             final selected =
                                 controller.selectedMaritalStatus.value ==
                                     status;
@@ -91,7 +93,7 @@ class MaritalStatusScreen extends GetView<SignupController> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      status,
+                                      status.tr,
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,

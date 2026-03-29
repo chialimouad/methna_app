@@ -5,14 +5,14 @@ import 'package:methna_app/app/controllers/home_controller.dart';
 import 'package:methna_app/app/data/models/user_model.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
-
-import 'package:methna_app/screens/search/search_radar_screen.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/core/utils/cloudinary_url.dart';
 import 'package:methna_app/app/routes/app_routes.dart';
+import 'package:methna_app/core/widgets/islamic_pattern_painter.dart';
 import 'package:methna_app/core/widgets/animated_empty_state.dart';
 import 'package:methna_app/core/widgets/baraka_meter.dart';
 import 'package:methna_app/core/widgets/intent_badge.dart';
-import 'package:methna_app/core/widgets/daily_insight_card.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
@@ -20,90 +20,186 @@ class HomeScreen extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: Stack(
         children: [
-          // ── State-dependent content ──
-          Obx(() {
-            if (!controller.locationGranted.value) {
-              return _EnableLocationWidget(onRefresh: controller.requestLocationAndFetch);
-            }
-            if (controller.isLoading.value && controller.discoverUsers.isEmpty) {
-              return const SearchRadarScreen();
-            }
-            if (controller.hasError.value && controller.discoverUsers.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    const Text('Could not load profiles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-                    const SizedBox(height: 8),
-                    Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: controller.fetchDiscoverUsers,
-                      icon: const Icon(LucideIcons.refreshCw, size: 16),
-                      label: const Text('Retry'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    ),
-                  ],
-                ),
-              );
-            }
-            if (controller.discoverUsers.isEmpty) {
-              return AnimatedEmptyState(
-                lottieAsset: 'assets/animations/location.json',
-                title: 'No new souls found',
-                subtitle: 'Try expanding your filters or check back later.',
-                fallbackIcon: LucideIcons.search,
-                titleColor: Colors.white,
-                subtitleColor: Colors.grey.shade400,
-              );
-            }
-            return _CardStackScreen(controller: controller);
-          }),
-
-          // ── Persistent top-left: user avatar ──
-          Positioned(
-            top: topPad + 12,
-            left: 16,
-            child: Obx(() => controller.discoverUsers.isNotEmpty
-                ? const SizedBox.shrink() // CardStackScreen draws its own
-                : _MiniAvatarHeader(
-                    user: controller.currentUser,
-                    onTap: () => Get.toNamed(AppRoutes.settings),
-                  )),
+          // Background Pattern
+          Positioned.fill(
+            child: IslamicPatternWidget(
+              opacity: isDark ? 0.03 : 0.05,
+              color: isDark ? Colors.white : AppColors.emerald,
+            ),
           ),
 
-          // ── Persistent top-right: notif + search + filter ──
-          Positioned(
-            top: topPad + 12,
-            right: 16,
-            child: Obx(() => controller.discoverUsers.isNotEmpty
-                ? const SizedBox.shrink() // CardStackScreen draws its own
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
+          Column(
+            children: [
+              // 1. App Bar Header
+              _buildHeader(context, isDark, topPad),
+
+              // 2. Main Swiper Area
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value && controller.discoverUsers.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (controller.isEmpty.value || controller.discoverUsers.isEmpty) {
+                    return Center(
+                      child: AnimatedEmptyState(
+                        lottieAsset: 'assets/animations/no_users.json',
+                        title: 'all_caught_up'.tr,
+                        subtitle: 'expand_filters_desc'.tr,
+                        fallbackIcon: LucideIcons.search,
+                      ),
+                    );
+                  }
+                  return Stack(
                     children: [
-                      _GlassCircleBtn(
-                        icon: LucideIcons.bell,
-                        onTap: controller.openNotifications,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                        child: CardSwiper(
+                          cardsCount: controller.discoverUsers.length,
+                          numberOfCardsDisplayed: 3,
+                          backCardOffset: const Offset(0, 40),
+                          padding: EdgeInsets.zero,
+                          isDisabled: controller.isLoading.value,
+                          onSwipe: (previousIndex, currentIndex, direction) {
+                            final user = controller.discoverUsers[previousIndex];
+                            if (direction == CardSwiperDirection.right) {
+                              controller.likeUser(user.id);
+                            } else if (direction == CardSwiperDirection.left) {
+                              controller.passUser(user.id);
+                            } else if (direction == CardSwiperDirection.top) {
+                              controller.superLikeUser(user.id);
+                            }
+                            return true;
+                          },
+                          onUndo: (previousIndex, currentIndex, direction) {
+                            controller.rewindLastSwipe();
+                            return true;
+                          },
+                          cardBuilder: (context, index, horizontalOffsetPercentage, verticalOffsetPercentage) {
+                            final user = controller.discoverUsers[index];
+                            return _UserSwipeCard(user: user, controller: controller, isDark: isDark);
+                          },
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _GlassCircleBtn(
-                        icon: LucideIcons.search,
-                        onTap: () => Get.toNamed(AppRoutes.search),
-                      ),
-                      const SizedBox(height: 12),
-                      _GlassCircleBtn(
-                        icon: LucideIcons.sliders,
-                        onTap: controller.openFilter,
+
+                      // Swipe Actions Bottom Bar
+                      Positioned(
+                        bottom: 40 + bottomPad,
+                        left: 0,
+                        right: 0,
+                        child: _buildSwipeActions(isDark),
                       ),
                     ],
-                  )),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDark, double topPad) {
+    final user = controller.currentUser;
+    return Container(
+      padding: EdgeInsets.only(top: topPad + 10, left: 20, right: 20, bottom: 10),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: controller.openProfile,
+            child: Container(
+              width: 44, height: 44,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary, width: 2),
+              ),
+              child: ClipOval(
+                child: user?.mainPhotoUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: CloudinaryUrl.thumbnail(user!.mainPhotoUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : Center(
+                        child: Text(
+                          Helpers.getInitials(user?.firstName, user?.lastName),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'salaam'.tr + ', ${user?.firstName ?? 'User'} 👋',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.secondary),
+                ),
+                Text('discover_matches'.tr, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          _ActionCircleButton(icon: LucideIcons.sliders, onTap: controller.openFilter, isDark: isDark),
+          const SizedBox(width: 10),
+          _ActionCircleButton(icon: LucideIcons.bell, onTap: controller.openNotifications, isDark: isDark, hasBadge: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwipeActions(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _SwipeBtn(
+            icon: LucideIcons.rotateCcw,
+            color: AppColors.gold,
+            size: 50,
+            onTap: controller.rewindLastSwipe,
+            isEnabled: controller.canRewind,
+          ),
+          _SwipeBtn(
+            icon: LucideIcons.x,
+            color: Colors.redAccent,
+            size: 64,
+            onTap: () {
+              // Trigger swiper left manually if needed or just call passUser
+              if (controller.discoverUsers.isNotEmpty) {
+                controller.passUser(controller.discoverUsers[0].id);
+              }
+            },
+          ),
+          _SwipeBtn(
+            icon: LucideIcons.heart,
+            color: AppColors.emerald,
+            size: 64,
+            onTap: () {
+              if (controller.discoverUsers.isNotEmpty) {
+                controller.likeUser(controller.discoverUsers[0].id);
+              }
+            },
+          ),
+          _SwipeBtn(
+            icon: LucideIcons.zap,
+            color: Colors.amber,
+            size: 50,
+            onTap: () {
+              if (controller.discoverUsers.isNotEmpty) {
+                controller.superLikeUser(controller.discoverUsers[0].id);
+              }
+            },
           ),
         ],
       ),
@@ -111,597 +207,475 @@ class HomeScreen extends GetView<HomeController> {
   }
 }
 
-class _EnableLocationWidget extends StatelessWidget {
-  final VoidCallback onRefresh;
-  const _EnableLocationWidget({required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(LucideIcons.mapPinOff, size: 64, color: AppColors.primary),
-            const SizedBox(height: 16),
-            const Text('Location Required', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 8),
-            Text('Please enable location services so we can find people near you.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade400)),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: onRefresh,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12)),
-              child: const Text('Enable Location'),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CARD STACK SCREEN — Tinder-style swipeable cards
-// ═══════════════════════════════════════════════════════════════════════════
-class _CardStackScreen extends StatefulWidget {
+class _UserSwipeCard extends StatefulWidget {
+  final UserModel user;
   final HomeController controller;
-  const _CardStackScreen({required this.controller});
+  final bool isDark;
+
+  const _UserSwipeCard({required this.user, required this.controller, required this.isDark});
 
   @override
-  State<_CardStackScreen> createState() => _CardStackScreenState();
+  State<_UserSwipeCard> createState() => _UserSwipeCardState();
 }
 
-class _CardStackScreenState extends State<_CardStackScreen>
-    with TickerProviderStateMixin {
-  // Drag state
-  Offset _dragPos = Offset.zero;
-  bool _isDragging = false;
-
-  // Fly-away animation
-  late AnimationController _flyAwayCtrl;
-  late Animation<Offset> _flyAwayAnim;
-
-  // Overlay stamp animation (LIKE / NOPE / SUPER LIKE)
-  String _overlayStamp = '';
-
-  // Like burst animation
-  late AnimationController _burstCtrl;
-
-  // Details sheet variables removed
-
-
-  @override
-  void initState() {
-    super.initState();
-    _flyAwayCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _flyAwayAnim = Tween(begin: Offset.zero, end: Offset.zero).animate(
-      CurvedAnimation(parent: _flyAwayCtrl, curve: Curves.easeIn),
-    );
-    _burstCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+class _UserSwipeCardState extends State<_UserSwipeCard> {
+  final ScrollController _scrollController = ScrollController();
+  final RxInt _currentPhotoIndex = 0.obs;
+  
+  List<String> get _photos {
+    if (widget.user.photos != null && widget.user.photos!.isNotEmpty) {
+      return widget.user.photos!.map((p) => p.url).toList();
+    }
+    return widget.user.mainPhotoUrl != null ? [widget.user.mainPhotoUrl!] : [];
   }
 
   @override
   void dispose() {
-    _flyAwayCtrl.dispose();
-    _burstCtrl.dispose();
+    _scrollController.dispose();
     super.dispose();
-  }
-
-  UserModel? get _currentUser {
-    final users = widget.controller.discoverUsers;
-    if (users.isEmpty) return null;
-    final idx = widget.controller.currentCardIndex.value.clamp(0, users.length - 1);
-    return users[idx];
-  }
-
-  // ── Thresholds ──
-  static const _swipeThreshold = 100.0;
-
-  void _onPanStart(DragStartDetails d) {
-    setState(() => _isDragging = true);
-  }
-
-  void _onPanUpdate(DragUpdateDetails d) {
-    setState(() {
-      _dragPos += d.delta;
-      // Determine overlay stamp
-      if (_dragPos.dx > _swipeThreshold * 0.5) {
-        _overlayStamp = 'LIKE';
-      } else {
-        _overlayStamp = '';
-      }
-    });
-  }
-
-  void _onPanEnd(DragEndDetails d) {
-    final user = _currentUser;
-    if (user == null) return;
-
-    if (_dragPos.dx > _swipeThreshold) {
-      _animateOff(Offset(1500, _dragPos.dy), () {
-        _burstCtrl.forward(from: 0);
-        widget.controller.likeUser(user.id);
-      });
-    } else if (_dragPos.dx < -_swipeThreshold) {
-      _animateOff(Offset(-1500, _dragPos.dy), () => widget.controller.passUser(user.id));
-    } else {
-      // Spring back
-      setState(() {
-        _dragPos = Offset.zero;
-        _isDragging = false;
-        _overlayStamp = '';
-      });
-    }
-  }
-
-  void _animateOff(Offset target, VoidCallback onComplete) {
-    _flyAwayAnim = Tween(begin: _dragPos, end: target).animate(
-      CurvedAnimation(parent: _flyAwayCtrl, curve: Curves.easeIn),
-    );
-    _flyAwayCtrl.forward(from: 0).then((_) {
-      onComplete();
-      setState(() {
-        _dragPos = Offset.zero;
-        _isDragging = false;
-        _overlayStamp = '';
-      });
-      _flyAwayCtrl.reset();
-    });
-  }
-
-  // ── Programmatic actions from buttons ──
-  void _triggerLike() {
-    final user = _currentUser;
-    if (user == null) return;
-    _burstCtrl.forward(from: 0);
-    _animateOff(const Offset(1500, 0), () => widget.controller.likeUser(user.id));
-  }
-
-  void _triggerPass() {
-    final user = _currentUser;
-    if (user == null) return;
-    _animateOff(const Offset(-1500, 0), () => widget.controller.passUser(user.id));
-  }
-
-  void _showComplimentDialog() {
-    final user = _currentUser;
-    if (user == null) return;
-    final tc = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Send Compliment', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: TextField(
-          controller: tc,
-          maxLength: 200,
-          decoration: InputDecoration(
-            hintText: 'Write something nice...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (tc.text.trim().isNotEmpty) {
-                widget.controller.complimentUser(user.id, tc.text.trim());
-                Get.back();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Obx(() {
-        final users = widget.controller.discoverUsers;
-        if (users.isEmpty) {
-          return const AnimatedEmptyState(
-            lottieAsset: 'assets/animations/no_users.json',
-            title: 'No Matches Nearby',
-            subtitle: 'You have seen everyone in your area.\nTry expanding your distance preferences!',
-            fallbackIcon: LucideIcons.search,
-          );
-        }
-        
-        final idx = widget.controller.currentCardIndex.value.clamp(0, users.length - 1);
-        final user = users[idx];
-
-        // Card offset: either from drag or fly-away
-        final offset = _flyAwayCtrl.isAnimating ? _flyAwayAnim.value : _dragPos;
-        final angle = _isDragging || _flyAwayCtrl.isAnimating
-            ? (offset.dx / 600) * 0.5
-            : 0.0;
-
-        return AnimatedBuilder(
-          animation: _flyAwayCtrl,
-          builder: (context, _) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // ── Background card (next user peek) ──
-                if (users.length > 1)
-                  Positioned.fill(
-                    child: Transform.scale(
-                      scale: 0.92 + 0.08 * (offset.distance / 300).clamp(0, 1),
-                      child: _buildCardContent(
-                        users[(idx + 1) % users.length],
-                        context,
-                      ),
-                    ),
-                  ),
-
-                // ── Top (draggable) card ──
-                Positioned.fill(
-                  child: GestureDetector(
-                    onPanStart: _onPanStart,
-                    onPanUpdate: _onPanUpdate,
-                    onPanEnd: _onPanEnd,
-                    onDoubleTap: _triggerLike,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..translate(offset.dx, offset.dy)
-                        ..rotateZ(angle),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          _buildCardContent(user, context),
-
-                          // ── Swipe overlay stamps ──
-                          if (_overlayStamp == 'LIKE')
-                            _StampOverlay(
-                              text: 'LIKE',
-                              color: const Color(0xFF00E676),
-                              rotation: -0.3,
-                              alignment: Alignment.topLeft,
-                            ),
-                          if (_overlayStamp == 'NOPE')
-                            _StampOverlay(
-                              text: 'NOPE',
-                              color: const Color(0xFFFF4458),
-                              rotation: 0.3,
-                              alignment: Alignment.topRight,
-                            ),
-
-                          // ── Baraka Meter + Intent Badge overlay ──
-                          Positioned(
-                            left: 14,
-                            bottom: 140,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Obx(() => BarakaMeter(
-                                  score: widget.controller.getBarakaScore(user.id),
-                                  level: widget.controller.getBarakaLevel(user.id),
-                                  compact: true,
-                                )),
-                                const SizedBox(height: 6),
-                                if (user.profile?.intentMode != null)
-                                  IntentBadge(
-                                    intentMode: user.profile!.intentMode!,
-                                    compact: true,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Like heart burst animation ──
-                if (_burstCtrl.isAnimating)
-                  Center(child: _HeartBurst(animation: _burstCtrl)),
-
-                // ── Top bar (Logged-in user avatar + icons) ──
-                Positioned(
-                  top: topPad + 12,
-                  left: 16,
-                  child: _MiniAvatarHeader(
-                    user: widget.controller.currentUser,
-                    onTap: () => Get.toNamed(AppRoutes.settings),
-                  ),
-                ),
-                Positioned(
-                  top: topPad + 12,
-                  right: 16,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _GlassCircleBtn(
-                        icon: LucideIcons.bell,
-                        onTap: widget.controller.openNotifications,
-                      ),
-                      const SizedBox(height: 12),
-                      _GlassCircleBtn(
-                        icon: LucideIcons.search,
-                        onTap: () => Get.toNamed(AppRoutes.search),
-                      ),
-                      const SizedBox(height: 12),
-                      _GlassCircleBtn(
-                        icon: LucideIcons.sliders,
-                        onTap: widget.controller.openFilter,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── Daily Insight overlay ──
-                Positioned(
-                  top: topPad + 70,
-                  left: 0,
-                  right: 0,
-                  child: Obx(() {
-                    if (widget.controller.dailyInsightDismissed.value ||
-                        widget.controller.dailyInsightContent.value.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return DailyInsightCard(
-                      content: widget.controller.dailyInsightContent.value,
-                      author: widget.controller.dailyInsightAuthor.value,
-                      onDismiss: widget.controller.dismissDailyInsight,
-                    );
-                  }),
-                ),
-
-                // ── Bottom user info + action bar ──
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _BottomSection(
-                    user: user,
-                    bottomPad: bottomPad,
-                    onLike: _triggerLike,
-                    onPass: _triggerPass,
-                    onRewind: widget.controller.rewindLastSwipe,
-                    onCompliment: _showComplimentDialog,
-                    onBoost: () => widget.controller.requestRematch(user.id),
-                    onDetails: () => _openDetails(user),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      });
+    final user = widget.user;
+    final controller = widget.controller;
+    
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: widget.isDark ? AppColors.cardDark : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Photo Section with indicators
+              _buildPhotoSection(user, controller),
+              
+              // User Details Section
+              _buildDetailsSection(user),
+            ],
+          ),
+        ),
+      ),
+    );
   }
-
-  Widget _buildCardContent(UserModel user, BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+  
+  Widget _buildPhotoSection(UserModel user, HomeController controller) {
+    return SizedBox(
+      height: 420,
       child: Stack(
-        fit: StackFit.expand,
         children: [
-          // Photo
-          user.mainPhotoUrl != null
-              ? CachedNetworkImage(
-                  imageUrl: user.mainPhotoUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (c, u) => Container(color: AppColors.dividerLight),
-                  errorWidget: (c, u, e) => _PlaceholderPhoto(user: user),
-                )
-              : _PlaceholderPhoto(user: user),
-          // Gradient
-          Positioned.fill(
+          // Photo PageView
+          PageView.builder(
+            itemCount: _photos.isEmpty ? 1 : _photos.length,
+            onPageChanged: (i) => _currentPhotoIndex.value = i,
+            itemBuilder: (context, index) {
+              if (_photos.isEmpty) {
+                return Container(
+                  color: Colors.grey.shade200,
+                  child: Center(
+                    child: Text(
+                      Helpers.getInitials(user.firstName, user.lastName),
+                      style: TextStyle(fontSize: 80, fontWeight: FontWeight.w900, color: Colors.grey.shade400),
+                    ),
+                  ),
+                );
+              }
+              return CachedNetworkImage(
+                imageUrl: CloudinaryUrl.large(_photos[index]),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(color: Colors.grey.shade200),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey.shade200,
+                  child: const Icon(LucideIcons.user, size: 60, color: Colors.grey),
+                ),
+              );
+            },
+          ),
+          
+          // Photo Indicators
+          if (_photos.length > 1)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Obx(() => Row(
+                children: List.generate(_photos.length, (i) => Expanded(
+                  child: Container(
+                    height: 3,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: i == _currentPhotoIndex.value ? Colors.white : Colors.white38,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                )),
+              )),
+            ),
+          
+          // Baraka Meter
+          Positioned(
+            top: 30,
+            left: 16,
+            child: Obx(() => BarakaMeter(
+              score: controller.getBarakaScore(user.id),
+              level: controller.getBarakaLevel(user.id),
+            )),
+          ),
+          
+          // Intent Badge
+          if (user.profile?.intentMode != null)
+            Positioned(
+              top: 30,
+              right: 16,
+              child: IntentBadge(intentMode: user.profile!.intentMode!),
+            ),
+          
+          // Bottom Gradient
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 120,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.4),
-                    Colors.black.withValues(alpha: 0.92),
-                  ],
-                  stops: const [0.0, 0.4, 0.65, 1.0],
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                 ),
               ),
+            ),
+          ),
+          
+          // Name & Basic Info overlay
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${user.firstName ?? user.username}, ${user.profile?.age ?? '?'}',
+                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    if (user.selfieVerified)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(color: Color(0xFFC69C6D), shape: BoxShape.circle),
+                        child: const Icon(LucideIcons.shieldCheck, color: Colors.white, size: 16),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.mapPin, color: Colors.white70, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${user.profile?.city ?? 'Unknown'}${user.profile?.country != null ? ', ${user.profile!.country}' : ''}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-
-  void _openDetails(UserModel user) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _UserDetailsSheet(user: user),
+  
+  Widget _buildDetailsSection(UserModel user) {
+    final isDark = widget.isDark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.white60 : Colors.grey.shade600;
+    
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quick Tags
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (user.profile?.sect != null) 
+                _DetailChip(icon: LucideIcons.moon, label: user.profile!.sect!, isDark: isDark),
+              if (user.profile?.maritalStatus != null) 
+                _DetailChip(icon: LucideIcons.heart, label: user.profile!.maritalStatus!, isDark: isDark),
+              if (user.profile?.education != null) 
+                _DetailChip(icon: LucideIcons.graduationCap, label: user.profile!.education!, isDark: isDark),
+              if (user.profile?.height != null) 
+                _DetailChip(icon: LucideIcons.ruler, label: '${user.profile!.height} cm', isDark: isDark),
+            ],
+          ),
+          
+          // Bio
+          if (user.profile?.bio != null && user.profile!.bio!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('About', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textColor)),
+            const SizedBox(height: 8),
+            Text(
+              user.profile!.bio!,
+              style: TextStyle(fontSize: 14, height: 1.5, color: subtitleColor),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          
+          // Religious Info
+          if (user.profile?.religiousLevel != null || user.profile?.prayerFrequency != null) ...[
+            const SizedBox(height: 20),
+            _buildInfoCard(
+              title: 'Faith & Practice',
+              icon: LucideIcons.sparkles,
+              isDark: isDark,
+              children: [
+                if (user.profile?.religiousLevel != null)
+                  _buildInfoRow(LucideIcons.heart, 'Religious Level', user.profile!.religiousLevel!.replaceAll('_', ' '), isDark),
+                if (user.profile?.prayerFrequency != null)
+                  _buildInfoRow(LucideIcons.clock, 'Prayer', user.profile!.prayerFrequency!.replaceAll('_', ' '), isDark),
+                if (user.profile?.hijabStatus != null)
+                  _buildInfoRow(LucideIcons.shirt, 'Hijab', user.profile!.hijabStatus!, isDark),
+              ],
+            ),
+          ],
+          
+          // Career & Education
+          if (user.profile?.jobTitle != null || user.profile?.company != null) ...[
+            const SizedBox(height: 16),
+            _buildInfoCard(
+              title: 'Career',
+              icon: LucideIcons.briefcase,
+              isDark: isDark,
+              children: [
+                if (user.profile?.jobTitle != null)
+                  _buildInfoRow(LucideIcons.briefcase, 'Job', user.profile!.jobTitle!, isDark),
+                if (user.profile?.company != null)
+                  _buildInfoRow(LucideIcons.building, 'Company', user.profile!.company!, isDark),
+              ],
+            ),
+          ],
+          
+          // Interests
+          if (user.profile?.interests != null && user.profile!.interests!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Interests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textColor)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: user.profile!.interests!.map((i) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(i, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              )).toList(),
+            ),
+          ],
+          
+          // Languages
+          if (user.profile?.languages != null && user.profile!.languages!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('Languages', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textColor)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: user.profile!.languages!.map((l) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(l, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor)),
+              )).toList(),
+            ),
+          ],
+          
+          // Bottom padding for swipe buttons
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildInfoCard({required String title, required IconData icon, required bool isDark, required List<Widget> children}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black87)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildInfoRow(IconData icon, String label, String value, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: isDark ? Colors.white38 : Colors.grey),
+          const SizedBox(width: 10),
+          Text('$label: ', style: TextStyle(fontSize: 13, color: isDark ? Colors.white54 : Colors.grey.shade600)),
+          Expanded(
+            child: Text(
+              value.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' '),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+class _DetailChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isDark;
+  
+  const _DetailChip({required this.icon, required this.label, required this.isDark});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: isDark ? Colors.white70 : Colors.grey.shade700),
+          const SizedBox(width: 6),
+          Text(
+            label.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' '),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-// ═══════════════════════════════════════════════════════════════════════════
-// STAMP OVERLAY (LIKE / NOPE / SUPER LIKE)
-// ═══════════════════════════════════════════════════════════════════════════
-class _StampOverlay extends StatelessWidget {
-  final String text;
-  final Color color;
-  final double rotation;
-  final Alignment alignment;
-
-  const _StampOverlay({
-    required this.text,
-    required this.color,
-    required this.rotation,
-    required this.alignment,
-  });
+class _InfoChip extends StatelessWidget {
+  final String label;
+  const _InfoChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
-      child: Padding(
-        padding: const EdgeInsets.all(50),
-        child: Transform.rotate(
-          angle: rotation,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: color, width: 4),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: color,
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 4,
-                shadows: [Shadow(blurRadius: 12, color: Colors.black54)],
-              ),
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+class _SwipeBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  final VoidCallback onTap;
+  final bool isEnabled;
+
+  const _SwipeBtn({required this.icon, required this.color, required this.size, required this.onTap, this.isEnabled = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.5,
+      child: GestureDetector(
+        onTap: isEnabled ? onTap : null,
+        child: Container(
+          width: size, height: size,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 5)),
+            ],
           ),
+          child: Icon(icon, color: color, size: size * 0.4),
         ),
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HEART BURST (like animation)
-// ═══════════════════════════════════════════════════════════════════════════
-class _HeartBurst extends StatelessWidget {
-  final AnimationController animation;
-  const _HeartBurst({required this.animation});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (ctx, _) {
-        final t = animation.value;
-        final scale = t < 0.5 ? 1.0 + t * 2.0 : 2.0 - (t - 0.5) * 3.0;
-        final opacity = t < 0.7 ? 1.0 : 1.0 - (t - 0.7) / 0.3;
-        return Opacity(
-          opacity: opacity.clamp(0.0, 1.0),
-          child: Transform.scale(
-            scale: scale.clamp(0.0, 3.0),
-            child: const Icon(
-              LucideIcons.heart,
-              color: Color(0xFFFF2D55),
-              size: 100,
-              shadows: [Shadow(blurRadius: 30, color: Colors.black38)],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MINI AVATAR HEADER
-// ═══════════════════════════════════════════════════════════════════════════
-class _MiniAvatarHeader extends StatelessWidget {
-  final UserModel? user;
-  final VoidCallback? onTap;
-  
-  const _MiniAvatarHeader({required this.user, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final completion = user?.profile?.profileCompletionPercentage ?? 0;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 2),
-          ),
-          child: ClipOval(
-            child: user?.mainPhotoUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: user!.mainPhotoUrl!,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    color: Colors.white,
-                    child: Center(
-                      child: Text(
-                        Helpers.getInitials(user?.firstName, user?.lastName),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$completion%',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            shadows: [Shadow(blurRadius: 4, color: Colors.black)],
-          ),
-        ),
-      ],
-    ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// GLASS CIRCLE BUTTON
-// ═══════════════════════════════════════════════════════════════════════════
-class _GlassCircleBtn extends StatelessWidget {
+class _ActionCircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _GlassCircleBtn({required this.icon, required this.onTap});
+  final bool isDark;
+  final bool hasBadge;
+
+  const _ActionCircleButton({required this.icon, required this.onTap, required this.isDark, this.hasBadge = false});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+            ),
+            child: Icon(icon, color: isDark ? Colors.white : AppColors.secondary, size: 20),
+          ),
+          if (hasBadge)
+            Positioned(
+              right: 2, top: 2,
+              child: Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -713,138 +687,131 @@ class _GlassCircleBtn extends StatelessWidget {
 class _BottomSection extends StatelessWidget {
   final UserModel user;
   final double bottomPad;
-  final VoidCallback onLike, onPass, onRewind, onCompliment, onBoost, onDetails;
+  final bool isDark;
+  final VoidCallback onLike, onPass, onRewind, onCompliment, onSuperLike, onDetails;
 
   const _BottomSection({
     required this.user,
     required this.bottomPad,
+    required this.isDark,
     required this.onLike,
     required this.onPass,
     required this.onRewind,
     required this.onCompliment,
-    required this.onBoost,
+    required this.onSuperLike,
     required this.onDetails,
   });
 
   @override
   Widget build(BuildContext context) {
+    final HomeController controller = Get.find<HomeController>();
+    final isPremium = controller.isPremium;
+
     return Container(
-      padding: EdgeInsets.only(bottom: bottomPad + 30, left: 24, right: 24, top: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // ── User info ──
-          GestureDetector(
-            onTap: onDetails,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        '${user.firstName ?? user.username ?? 'User'}, ${user.profile?.age ?? ''}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (user.selfieVerified) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF6B4226), // Dark brown/burgundy shield
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(LucideIcons.check, color: Colors.white, size: 14),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      'Based in ${user.profile?.city ?? 'Unknown location'}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text('🇩🇿', style: TextStyle(fontSize: 16)), // Placeholder flag
-                  ],
-                ),
-              ],
-            ),
+          // Rewind (Gold Glass)
+          _ActionBtn(
+            icon: LucideIcons.refreshCcw,
+            bgColor: isDark ? AppColors.cardDark.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
+            iconColor: AppColors.gold,
+            size: 46,
+            iconSize: 20,
+            outlined: true,
+            onTap: () {
+              if (isPremium) {
+                onRewind();
+              } else {
+                _showPremiumRequired('Rewind');
+              }
+            },
           ),
-
-          const SizedBox(height: 24),
-
-          // ── Action buttons ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Rewind (Green)
-              _ActionBtn(
-                icon: LucideIcons.rotateCcw,
-                bgColor: const Color(0xFF4CAF50),
-                iconColor: Colors.white,
-                size: 50,
-                iconSize: 26,
-                onTap: onRewind,
-              ),
-              // Pass (Dark Semi-transparent)
-              _ActionBtn(
-                icon: LucideIcons.x,
-                bgColor: Colors.black.withValues(alpha: 0.5),
-                iconColor: Colors.white,
-                size: 60,
-                iconSize: 32,
-                onTap: onPass,
-              ),
-              // Like (Pink) - center biggest
-              _ActionBtn(
-                icon: LucideIcons.heart,
-                bgColor: const Color(0xFFE91E63),
-                iconColor: Colors.white,
-                size: 72,
-                iconSize: 36,
-                onTap: onLike,
-              ),
-              // Compliment / Sparkles (White)
-              _ActionBtn(
-                icon: LucideIcons.sparkles,
-                bgColor: Colors.white,
-                iconColor: const Color(0xFFE91E63),
-                size: 60,
-                iconSize: 32,
-                onTap: onCompliment,
-              ),
-              // Boost (Blue)
-              _ActionBtn(
-                icon: LucideIcons.arrowUp,
-                bgColor: const Color(0xFF2196F3),
-                iconColor: Colors.white,
-                size: 50,
-                iconSize: 26,
-                onTap: onBoost,
-              ),
-            ],
+          // Dislike (Plum/Grey)
+          _ActionBtn(
+            icon: LucideIcons.x,
+            bgColor: AppColors.secondaryDark.withValues(alpha: 0.9),
+            iconColor: Colors.white,
+            size: 58,
+            iconSize: 26,
+            onTap: onPass,
+          ),
+          // Like (Emerald) - Largest
+          _ActionBtn(
+            icon: LucideIcons.heart,
+            bgColor: AppColors.emerald,
+            iconColor: Colors.white,
+            size: 72,
+            iconSize: 32,
+            onTap: onLike,
+          ),
+          // Send Compliment (Gold)
+          _ActionBtn(
+            icon: LucideIcons.award,
+            bgColor: AppColors.gold,
+            iconColor: Colors.white,
+            size: 58,
+            iconSize: 26,
+            onTap: () {
+              if (isPremium) {
+                onCompliment();
+              } else {
+                _showPremiumRequired('Compliment');
+              }
+            },
+          ),
+          // Boost (Accent/Glass)
+          _ActionBtn(
+            icon: LucideIcons.zap,
+            bgColor: isDark ? AppColors.cardDark.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.8),
+            iconColor: Colors.amber,
+            size: 46,
+            iconSize: 20,
+            outlined: true,
+            onTap: () {
+              if (isPremium) {
+                Helpers.showSnackbar(message: 'profile_boosted_msg'.tr);
+              } else {
+                _showPremiumRequired('Boost');
+              }
+            },
           ),
         ],
       ),
+    );
+  }
+
+  void _showPremiumRequired(String feature) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.crown, size: 48, color: AppColors.gold),
+            const SizedBox(height: 16),
+            Text('premium_required'.tr, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text('upgrade_to_unlock'.tr, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Get.back(),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, minimumSize: const Size(double.infinity, 50)),
+              child: Text('maybe_later'.tr, style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ), // Or a dedicated "Go Premium" modal
+      isScrollControlled: true,
+    );
+    Helpers.showSnackbar(
+      message: 'premium_feature_msg'.trParams({'feature': feature}),
+      isError: false,
     );
   }
 }
@@ -943,166 +910,389 @@ class _UserDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (ctx, scrollCtrl) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Stack(
+        children: [
+          // ── Scrollable Content ──
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // 1. Photo Gallery with Indicators
+                _buildGallery(user),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 2. Name & Age & Verified
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${user.firstName ?? user.username ?? 'User'}${user.profile?.age != null ? ", ${user.profile!.age}" : ""}',
+                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                            ),
+                          ),
+                          if (user.selfieVerified) ...[
+                             Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: Color(0xFFC69C6D), shape: BoxShape.circle),
+                              child: const Icon(LucideIcons.shieldCheck, color: Colors.white, size: 16),
+                            ),
+                          ],
+                        ],
+                      ),
+                      
+                      if (user.profile?.city != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(LucideIcons.mapPin, size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${user.profile!.city!}${user.profile!.country != null ? " ${Helpers.getCountryFlag(user.profile!.country)}" : ""}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 24),
+
+                      // 3. About Me
+                      if (user.profile?.bio?.isNotEmpty == true) ...[
+                        _buildSectionHeader('about_me'.tr),
+                        Text(
+                          user.profile!.bio!,
+                          style: TextStyle(fontSize: 15, height: 1.6, color: Colors.grey.shade800),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // 4. Faith & Foundation (Premium Section)
+                      if (user.profile?.sect != null || user.profile?.religiousLevel != null) ...[
+                        _buildPremiumSection(
+                          title: 'religious_foundation'.tr,
+                          icon: LucideIcons.moon,
+                          child: Wrap(
+                            spacing: 8, runSpacing: 8,
+                            children: [
+                              if (user.profile?.sect != null) _buildPill(user.profile!.sect!.capitalizeFirst!),
+                              if (user.profile?.religiousLevel != null) _buildPill(user.profile!.religiousLevel!.replaceAll('_', ' ').capitalizeFirst!),
+                              if (user.profile?.prayerFrequency != null) _buildPill('${'prayer_label'.tr}: ${user.profile!.prayerFrequency!.replaceAll('_', ' ').capitalizeFirst!}'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // 5. Lifestyle & Attributes
+                      _buildPremiumSection(
+                        title: 'lifestyle_vibe'.tr,
+                        icon: LucideIcons.heart,
+                        child: Wrap(
+                          spacing: 8, runSpacing: 8,
+                          children: [
+                            if (user.profile?.maritalStatus != null) _buildPill(user.profile!.maritalStatus!.capitalizeFirst!),
+                            if (user.profile?.height != null) _buildPill('${user.profile!.height} cm'),
+                            if (user.profile?.education != null) _buildPill(user.profile!.education!.capitalizeFirst!),
+                            if (user.profile?.dietary != null) _buildPill(user.profile!.dietary!.capitalizeFirst!),
+                            if (user.profile?.hijabStatus != null) _buildPill(user.profile!.hijabStatus!.capitalizeFirst!),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 6. Career
+                      if (user.profile?.jobTitle != null) ...[
+                        _buildPremiumSection(
+                          title: 'profession_label'.tr,
+                          icon: LucideIcons.briefcase,
+                          child: _buildAttributeRow(LucideIcons.briefcase, '${user.profile!.jobTitle!}${user.profile?.company != null ? " at ${user.profile!.company}" : ""}', padding: 0),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // 7. Interests
+                      if (user.profile?.interests?.isNotEmpty == true) ...[
+                        _buildSectionHeader('interests'.tr),
+                        _buildPills(user.profile!.interests!),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // 8. Languages
+                      if (user.profile?.languages?.isNotEmpty == true) ...[
+                        _buildSectionHeader('languages'.tr),
+                        _buildPills(user.profile!.languages!),
+                        const SizedBox(height: 24),
+                      ],
+
+                      const SizedBox(height: 180), // Bottom spacer for buttons
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: ListView(
-            controller: scrollCtrl,
-            padding: const EdgeInsets.all(24),
-            children: [
-              // Drag handle
-              Center(
+
+          // ── Fixed Top Header ──
+          PositionedDirectional(
+            top: 0,
+            start: 0,
+            end: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.9),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                   PositionedDirectional(
+                    start: 0,
+                    child: IconButton(
+                      icon: const Icon(LucideIcons.x, size: 24),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  Text(
+                    'profile'.tr,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  PositionedDirectional(
+                    end: 0,
+                    child: IconButton(
+                      icon: const Icon(LucideIcons.moreVertical, size: 24),
+                      onPressed: () {},
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Fixed Bottom Actions ──
+          Positioned(
+            bottom: bottomPad > 0 ? bottomPad + 10 : 20,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ModalActionBtn(icon: LucideIcons.x, color: Colors.red, onTap: () => Navigator.pop(context)),
+                  _ModalActionBtn(
+                    icon: LucideIcons.award, 
+                    color: Colors.orange, 
+                    isCircle: true, 
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showComplimentDialog(context, user.id, Get.find<HomeController>());
+                    }
+                  ),
+                  _ModalActionBtn(icon: LucideIcons.heart, color: Colors.pink, onTap: () {
+                    Navigator.pop(context);
+                    Get.find<HomeController>().likeUser(user.id);
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGallery(UserModel user) {
+    final photos = user.photos ?? [];
+    if (photos.isEmpty && user.mainPhotoUrl == null) {
+      return Container(
+        height: 400,
+        width: double.infinity,
+        color: Colors.grey.shade200,
+        child: const Icon(LucideIcons.image, size: 48, color: Colors.grey),
+      );
+    }
+
+    final displayPhotos = photos.isNotEmpty 
+        ? photos.map((p) => p.url).toList() 
+        : [user.mainPhotoUrl!];
+
+    final pageController = PageController();
+    final currentPage = 0.obs;
+
+    return SizedBox(
+      height: 500,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: pageController,
+            itemCount: displayPhotos.length,
+            onPageChanged: (v) => currentPage.value = v,
+            itemBuilder: (context, index) {
+              return CachedNetworkImage(
+                imageUrl: CloudinaryUrl.getResizedUrl(displayPhotos[index], width: 800),
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => _PlaceholderPhoto(user: user),
+              );
+            },
+          ),
+          // Indicators
+          PositionedDirectional(
+            top: 70, // Below header
+            start: 16,
+            end: 16,
+            child: Obx(() => Row(
+              children: List.generate(displayPhotos.length, (i) => Expanded(
                 child: Container(
-                  width: 40,
                   height: 4,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: i == currentPage.value ? Colors.white : Colors.white24,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Photo gallery row
-              if (user.photos != null && user.photos!.isNotEmpty)
-                SizedBox(
-                  height: 200,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: user.photos!.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (ctx, i) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: user.photos![i].url,
-                          width: 150,
-                          height: 200,
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // Name + age
-              Text(
-                '${user.firstName ?? user.username ?? 'User'}, ${user.profile?.age ?? ''}',
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-
-              // Location
-              if (user.profile?.city != null)
-                Row(
-                  children: [
-                    const Icon(LucideIcons.mapPin, size: 16, color: AppColors.primary),
-                    const SizedBox(width: 4),
-                    Text(user.profile!.city!, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                  ],
-                ),
-
-              const SizedBox(height: 16),
-
-              // Bio
-              if (user.profile?.bio != null && user.profile!.bio!.isNotEmpty) ...[
-                Text('About', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text(
-                  user.profile!.bio!,
-                  style: TextStyle(fontSize: 14, height: 1.5, color: Colors.grey.shade700),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Details grid
-              _DetailChips(user: user),
-
-              const SizedBox(height: 16),
-
-              // Interests
-              if (user.profile?.interests != null && user.profile!.interests!.isNotEmpty) ...[
-                Text('Interests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: user.profile!.interests!.map((h) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(h, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.primary)),
-                    );
-                  }).toList(),
-                ),
-              ],
-
-              const SizedBox(height: 40),
-            ],
+              )),
+            )),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
+
+  Widget _buildAttributeRow(IconData icon, String text, {double padding = 12}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: padding),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey.shade700))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumSection({required String title, required IconData icon, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 16, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.2)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
+  Widget _buildPills(List<String> items) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items.map((it) => _buildPill(it)).toList(),
+    );
+  }
+
+  Widget _buildPill(String text, {bool isActive = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.pink.withValues(alpha: 0.1) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isActive ? Colors.pink : Colors.black12, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isActive ? Colors.pink : Colors.grey.shade800,
+        ),
+      ),
+    );
+  }
+
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// DETAIL CHIPS (education, religion, etc.)
-// ═══════════════════════════════════════════════════════════════════════════
-class _DetailChips extends StatelessWidget {
-  final UserModel user;
-  const _DetailChips({required this.user});
+class _ModalActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool isCircle;
+  final VoidCallback onTap;
+
+  const _ModalActionBtn({required this.icon, required this.color, this.isCircle = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final items = <MapEntry<IconData, String>>[];
-    if (user.profile?.education != null) {
-      items.add(MapEntry(LucideIcons.graduationCap, user.profile!.education!));
-    }
-    if (user.profile?.jobTitle != null) {
-      items.add(MapEntry(LucideIcons.briefcase, user.profile!.jobTitle!));
-    }
-    if (user.profile?.religiousLevel != null) {
-      items.add(MapEntry(LucideIcons.sparkles, user.profile!.religiousLevel!));
-    }
-    if (user.profile?.height != null) {
-      items.add(MapEntry(LucideIcons.ruler, '${user.profile!.height} cm'));
-    }
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: items.map((e) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(e.key, size: 16, color: Colors.grey.shade600),
-              const SizedBox(width: 6),
-              Text(e.value, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-            ],
-          ),
-        );
-      }).toList(),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: isCircle ? 64 : 54,
+        height: isCircle ? 64 : 54,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: color, size: isCircle ? 32 : 24),
+      ),
     );
   }
 }
@@ -1117,14 +1307,61 @@ class _PlaceholderPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.primarySurface,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2C3E50), Color(0xFF000000)],
+        ),
+      ),
       child: Center(
         child: Text(
-          Helpers.getInitials(user.firstName, user.lastName),
-          style: const TextStyle(fontSize: 60, fontWeight: FontWeight.w800, color: AppColors.primary),
+          Helpers.getInitials(user.firstName ?? user.username, user.lastName),
+          style: const TextStyle(fontSize: 80, fontWeight: FontWeight.w900, color: Colors.white24),
         ),
       ),
     );
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRING EXTENSION
+// ═══════════════════════════════════════════════════════════════════════════
+
+void _showComplimentDialog(BuildContext context, String userId, HomeController controller) {
+  final tc = TextEditingController();
+  Get.dialog(
+    AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text('compliments_label'.tr, style: const TextStyle(fontWeight: FontWeight.w700)),
+      content: TextField(
+        controller: tc,
+        maxLength: 200,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'say_hello'.tr,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        maxLines: 3,
+      ),
+      actions: [
+        TextButton(onPressed: () => Get.back(), child: Text('cancel'.tr)),
+        ElevatedButton(
+          onPressed: () {
+            if (tc.text.trim().isNotEmpty) {
+              controller.complimentUser(userId, tc.text.trim());
+              Get.back();
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('send'.tr),
+        ),
+      ],
+    ),
+  );
 }
 

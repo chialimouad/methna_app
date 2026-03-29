@@ -9,27 +9,27 @@ class NotificationSettingsScreen extends GetView<SettingsController> {
 
   static const _icons = [
     LucideIcons.heart, LucideIcons.messageCircle, LucideIcons.star,
-    LucideIcons.eye, LucideIcons.calendar, LucideIcons.activity,
-    LucideIcons.shieldCheck, LucideIcons.megaphone, LucideIcons.lightbulb,
-    LucideIcons.barChart3, LucideIcons.userPlus, LucideIcons.clipboardList,
+    LucideIcons.eye, LucideIcons.calendar, LucideIcons.shieldCheck,
+    LucideIcons.megaphone, LucideIcons.lightbulb, LucideIcons.barChart3,
+    LucideIcons.userPlus, LucideIcons.clipboardList,
   ];
 
   static const _iconColors = [
     Color(0xFFE91E63), Color(0xFF2196F3), Color(0xFFFF9800),
-    Color(0xFF9C27B0), Color(0xFF4CAF50), Color(0xFFFF5722),
-    Color(0xFF00BCD4), Color(0xFFFF6B6B), Color(0xFFFFC107),
-    Color(0xFF3F51B5), Color(0xFF4ECDC4), Color(0xFF795548),
+    Color(0xFF9C27B0), Color(0xFF4CAF50), Color(0xFF00BCD4),
+    Color(0xFFFF6B6B), Color(0xFFFFC107), Color(0xFF3F51B5),
+    Color(0xFF4ECDC4), Color(0xFF795548),
   ];
 
   static const _settingKeys = [
-    'newMatches', 'newMessages', 'likesAndSuperLikes', 'profileVisitors',
-    'eventsAndActivities', 'matchesActivity', 'safetyAlerts', 'promotionsNews',
-    'inAppRecommendations', 'weeklyActivitySummary', 'connectionRequests', 'surveyFeedback',
+    'matchNotifications', 'messageNotifications', 'likeNotifications', 'profileVisitorNotifications',
+    'eventsNotifications', 'safetyAlertNotifications', 'promotionsNotifications',
+    'inAppRecommendationNotifications', 'weeklySummaryNotifications', 'connectionRequestNotifications', 'surveyNotifications',
   ];
 
   static const _settingLabels = [
     'new_matches', 'new_messages', 'likes_super_likes', 'profile_visitors',
-    'events_activities', 'matches_activity', 'safety_alerts', 'promotions_news',
+    'events_activities', 'safety_alerts', 'promotions_news',
     'in_app_recommendations', 'weekly_activity_summary', 'connection_requests', 'survey_feedback',
   ];
 

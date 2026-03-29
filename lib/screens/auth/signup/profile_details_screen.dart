@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:methna_app/app/controllers/signup_controller.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/validators.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -208,43 +209,57 @@ class ProfileDetailsScreen extends GetView<SignupController> {
                       ),
                       const SizedBox(height: 24),
 
-                      // ── Choose birthday date ──
-                      Obx(() => GestureDetector(
-                            onTap: () => _pickDate(context),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    LucideIcons.calendar,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  controller.dateOfBirth.value != null
-                                      ? DateFormat('MMM dd, yyyy')
-                                          .format(controller.dateOfBirth.value!)
-                                      : 'date_of_birth'.tr,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                    color: controller.dateOfBirth.value != null
-                                        ? (isDark
-                                            ? AppColors.textPrimaryDark
-                                            : AppColors.textPrimaryLight)
-                                        : AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
+                      const SizedBox(height: 12),
+
+                      // ── Country & City ──
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Obx(() => DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: controller.selectedCountry.value,
+                              decoration: InputDecoration(
+                                labelText: 'country'.tr,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                              ),
+                              items: controller.arabicCountries.map((c) => DropdownMenuItem(
+                                value: c, 
+                                child: Text(c.tr, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14))
+                              )).toList(),
+                              onChanged: (val) {
+                                if (val != null) controller.onCountryChanged(val);
+                              },
+                            )),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Obx(() => DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: controller.selectedCity.value.isEmpty && controller.availableCities.isNotEmpty
+                                  ? controller.availableCities.first
+                                  : (controller.availableCities.contains(controller.selectedCity.value) ? controller.selectedCity.value : null),
+                              decoration: InputDecoration(
+                                labelText: 'city'.tr,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                              ),
+                              items: controller.availableCities.map((city) => DropdownMenuItem(
+                                value: city, 
+                                child: Text(city.tr, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14))
+                              )).toList(),
+                              onChanged: (val) {
+                                if (val != null) controller.selectedCity.value = val;
+                              },
+                            )),
+                          ),
+                        ],
+                      ),
 
                       const SizedBox(height: 24),
                     ],
@@ -265,8 +280,7 @@ class ProfileDetailsScreen extends GetView<SignupController> {
                           ? null
                           : () {
                               if (controller.profileFormKey.currentState!
-                                      .validate() &&
-                                  controller.dateOfBirth.value != null) {
+                                      .validate()) {
                                 controller.registerAccount();
                               }
                             },
@@ -299,18 +313,6 @@ class ProfileDetailsScreen extends GetView<SignupController> {
         ),
       ),
     );
-  }
-
-  Future<void> _pickDate(BuildContext context) async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate:
-          DateTime.now().subtract(const Duration(days: 365 * 22)),
-      firstDate: DateTime(1960),
-      lastDate:
-          DateTime.now().subtract(const Duration(days: 365 * 18)),
-    );
-    if (date != null) controller.dateOfBirth.value = date;
   }
 }
 
@@ -435,7 +437,7 @@ class _PhoneField extends StatelessWidget {
                   : AppColors.textPrimaryLight,
             ),
             decoration: InputDecoration(
-              hintText: '0558904032',
+              hintText: 'phone_hint'.tr,
               hintStyle: TextStyle(color: hintColor, fontSize: 15),
               contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16, vertical: 16),

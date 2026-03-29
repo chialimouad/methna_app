@@ -141,11 +141,27 @@ class SettingsScreen extends GetView<SettingsController> {
                   _SettingsCard(
                     isDark: isDark, cardBg: cardBg, borderColor: borderColor,
                     children: [
-                      _SettingsRow(icon: LucideIcons.link, iconColor: const Color(0xFF2196F3), title: 'third_party_integrations'.tr, textColor: textColor, onTap: () => Get.toNamed(AppRoutes.thirdPartyIntegrations)),
-                      _Divider(isDark: isDark),
                       _SettingsRow(icon: LucideIcons.barChart3, iconColor: const Color(0xFF4CAF50), title: 'data_analytics'.tr, textColor: textColor, onTap: () => Get.toNamed(AppRoutes.dataAnalytics)),
                       _Divider(isDark: isDark),
+                      _SettingsRow(icon: LucideIcons.fileWarning, iconColor: AppColors.error, title: 'Report / Request', textColor: textColor, onTap: () => Get.toNamed(AppRoutes.reportRequest)),
+                      _Divider(isDark: isDark),
                       _SettingsRow(icon: LucideIcons.lifeBuoy, iconColor: const Color(0xFF9C27B0), title: 'help_support'.tr, textColor: textColor, onTap: () => Get.toNamed(AppRoutes.helpSupport)),
+                      _Divider(isDark: isDark),
+                      _SettingsRow(icon: LucideIcons.refreshCw, iconColor: const Color(0xFFFF5722), title: 'Reset App Data', textColor: textColor, onTap: () => _showResetDataDialog(context)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Legal Section ──
+                  _SectionLabel(label: 'Legal', isDark: isDark),
+                  const SizedBox(height: 8),
+                  _SettingsCard(
+                    isDark: isDark, cardBg: cardBg, borderColor: borderColor,
+                    children: [
+                      _SettingsRow(icon: LucideIcons.fileText, iconColor: const Color(0xFF607D8B), title: 'Terms & Conditions', textColor: textColor, onTap: () => Get.toNamed(AppRoutes.termsConditions)),
+                      _Divider(isDark: isDark),
+                      _SettingsRow(icon: LucideIcons.shieldAlert, iconColor: const Color(0xFF607D8B), title: 'Privacy Policy', textColor: textColor, onTap: () => Get.toNamed(AppRoutes.privacyPolicy)),
                     ],
                   ),
 
@@ -240,6 +256,77 @@ class SettingsScreen extends GetView<SettingsController> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: Text('logout'.tr, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showResetDataDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.cardDark : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5722).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(LucideIcons.refreshCw, size: 28, color: Color(0xFFFF5722)),
+              ),
+              const SizedBox(height: 20),
+              Text('Reset App Data', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
+              const SizedBox(height: 8),
+              Text(
+                'This will clear all local data including preferences and cached content. You will remain logged in.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text('cancel'.tr, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Get.back();
+                        await controller.resetAppData();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5722),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],

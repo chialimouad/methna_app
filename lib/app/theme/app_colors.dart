@@ -97,4 +97,23 @@ class AppColors {
   static const Color online = Color(0xFF4CAF50);
   static const Color verified = Color(0xFFE8396B);
   static const Color premium = Color(0xFFFFD700);
+
+  // ─── Islamic / Arabic Aesthetic ───────────────────────────────
+  static const Color emerald = Color(0xFFE8396B); // Replaces green with Brand Pink
+  static const Color emeraldLight = Color(0xFFFF6B9D);
+  static const Color gold = Color(0xFFFFB8C0); // Soft Pink/Rose Gold instead of yellow gold
+  static const Color goldLight = Color(0xFFFFF0F3);
+  static const Color parchment = Color(0xFFFFF5F7); // Very light pink tint
+
+  static const LinearGradient islamicGradient = LinearGradient(
+    colors: [Color(0xFFC2185B), Color(0xFFE8396B)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient goldPremiumGradient = LinearGradient(
+    colors: [Color(0xFFE8396B), Color(0xFFFFB8C0)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

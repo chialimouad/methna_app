@@ -1,7 +1,11 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'dart:async';
 import 'package:methna_app/app/data/services/api_service.dart';
 import 'package:methna_app/app/data/services/auth_service.dart';
 import 'package:methna_app/app/data/services/monetization_service.dart';
+import 'package:methna_app/app/data/services/notification_service.dart';
 import 'package:methna_app/app/data/models/user_model.dart';
 import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/core/constants/api_constants.dart';
@@ -9,6 +13,8 @@ import 'package:methna_app/core/utils/helpers.dart';
 
 import 'package:methna_app/app/data/services/location_service.dart';
 import 'package:methna_app/app/data/services/storage_service.dart';
+import 'package:methna_app/app/data/models/category_model.dart';
+import 'package:methna_app/app/data/models/success_story_model.dart';
 
 class HomeController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
@@ -16,9 +22,16 @@ class HomeController extends GetxController {
   final MonetizationService _monetization = Get.find<MonetizationService>();
   final LocationService _location = Get.find<LocationService>();
   final StorageService _storage = Get.find<StorageService>();
+  final NotificationService _notificationService = Get.find<NotificationService>();
 
   final RxList<UserModel> discoverUsers = <UserModel>[].obs;
+  final RxList<CategoryModel> categories = <CategoryModel>[].obs;
+  final RxList<SuccessStoryModel> successStories = <SuccessStoryModel>[].obs;
+  final RxString selectedCategoryId = ''.obs;
+
   final RxBool isLoading = false.obs;
+  final RxBool isLoadingCategories = false.obs;
+  final RxBool isLoadingStories = false.obs;
   final RxBool isEmpty = false.obs;
   final RxBool hasError = false.obs;
   final RxInt currentCardIndex = 0.obs;
@@ -31,6 +44,9 @@ class HomeController extends GetxController {
   final RxString genderFilter = 'all'.obs;
   final RxString educationFilter = ''.obs;
   final RxString religiousLevelFilter = ''.obs;
+  final RxString prayerFrequencyFilter = ''.obs;
+  final RxString marriageIntentionFilter = ''.obs;
+  final RxString livingSituationFilter = ''.obs;
   final RxList<String> interestsFilter = <String>[].obs;
   final RxBool verifiedOnlyFilter = false.obs;
   final RxBool goGlobalFilter = false.obs;
@@ -57,9 +73,15 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     _loadFilters();
-    fetchDiscoverUsers();
+    fetchAllInitialData();
     _monetization.fetchStatus();
     fetchDailyInsight();
+  }
+
+  Future<void> fetchAllInitialData() async {
+    fetchCategories();
+    fetchSuccessStories();
+    fetchDiscoverUsers();
   }
 
   void _loadFilters() {
@@ -67,6 +89,14 @@ class HomeController extends GetxController {
     maxAge.value = _storage.getString('filter_maxAge') != null ? int.parse(_storage.getString('filter_maxAge')!) : 45;
     maxDistance.value = _storage.getString('filter_maxDistance') != null ? double.parse(_storage.getString('filter_maxDistance')!) : 50.0;
     genderFilter.value = _storage.getString('filter_gender') ?? 'all';
+    educationFilter.value = _storage.getString('filter_education') ?? '';
+    religiousLevelFilter.value = _storage.getString('filter_religiousLevel') ?? '';
+    prayerFrequencyFilter.value = _storage.getString('filter_prayerFrequency') ?? '';
+    marriageIntentionFilter.value = _storage.getString('filter_marriageIntention') ?? '';
+    livingSituationFilter.value = _storage.getString('filter_livingSituation') ?? '';
+    verifiedOnlyFilter.value = _storage.getBool('filter_verifiedOnly') ?? false;
+    goGlobalFilter.value = _storage.getBool('filter_goGlobal') ?? false;
+    debugPrint('[Home] _loadFilters: loaded all filters from storage');
   }
 
   Future<void> saveFilters() async {
@@ -74,6 +104,14 @@ class HomeController extends GetxController {
     await _storage.saveString('filter_maxAge', maxAge.value.toString());
     await _storage.saveString('filter_maxDistance', maxDistance.value.toString());
     await _storage.saveString('filter_gender', genderFilter.value);
+    await _storage.saveString('filter_education', educationFilter.value);
+    await _storage.saveString('filter_religiousLevel', religiousLevelFilter.value);
+    await _storage.saveString('filter_prayerFrequency', prayerFrequencyFilter.value);
+    await _storage.saveString('filter_marriageIntention', marriageIntentionFilter.value);
+    await _storage.saveString('filter_livingSituation', livingSituationFilter.value);
+    await _storage.saveBool('filter_verifiedOnly', verifiedOnlyFilter.value);
+    await _storage.saveBool('filter_goGlobal', goGlobalFilter.value);
+    debugPrint('[Home] saveFilters: persisted all filters');
   }
 
   /// Called from the "Enable Location" button — requests permission with
@@ -91,66 +129,115 @@ class HomeController extends GetxController {
     if (genderFilter.value != 'all') 'gender': genderFilter.value,
     'minAge': minAge.value,
     'maxAge': maxAge.value,
-    if (!goGlobalFilter.value) 'maxDistance': maxDistance.value.round(),
+    if (!goGlobalFilter.value && locationGranted.value) 'maxDistance': maxDistance.value.round(),
     if (educationFilter.value.isNotEmpty) 'education': educationFilter.value,
     if (religiousLevelFilter.value.isNotEmpty) 'religiousLevel': religiousLevelFilter.value,
+    if (prayerFrequencyFilter.value.isNotEmpty) 'prayerFrequency': prayerFrequencyFilter.value,
+    if (marriageIntentionFilter.value.isNotEmpty) 'marriageIntention': marriageIntentionFilter.value,
+    if (livingSituationFilter.value.isNotEmpty) 'livingSituation': livingSituationFilter.value,
     if (interestsFilter.isNotEmpty) 'interests': interestsFilter.toList(),
     if (verifiedOnlyFilter.value) 'verifiedOnly': true,
   };
 
   Future<void> fetchDiscoverUsers() async {
+    if (isLoading.value) return; // Prevent duplicate calls
     isLoading.value = true;
     hasError.value = false;
     _page.value = 1;
     _hasMore.value = true;
     _seenUserIds.clear();
+    debugPrint('[Home] fetchDiscoverUsers: starting...');
 
+    // Check location but do NOT block discovery — fetch users regardless
     final hasPerm = await _location.checkPermission();
     locationGranted.value = hasPerm;
-
-    if (!hasPerm) {
-      isLoading.value = false;
-      isEmpty.value = true;
-      return;
-    }
+    debugPrint('[Home] fetchDiscoverUsers: locationGranted=$hasPerm');
 
     try {
-      final users = await _fetchPage(1);
+      // Add timeout to prevent hanging
+      final users = await _fetchPage(1).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Request timeout while fetching users');
+        },
+      );
+      
       discoverUsers.value = users;
       for (final u in users) {
         _seenUserIds.add(u.id);
       }
       isEmpty.value = discoverUsers.isEmpty;
       currentCardIndex.value = 0;
-      // Fetch Baraka scores for loaded users
-      _fetchBulkBaraka(users.map((u) => u.id).toList());
-    } catch (e) {
+      debugPrint('[Home] fetchDiscoverUsers: loaded ${users.length} users');
+      
+      // Fetch Baraka scores for loaded users (with error handling)
+      if (users.isNotEmpty) {
+        _fetchBulkBaraka(users.map((u) => u.id).toList()).catchError((e) {
+          debugPrint('[Home] Failed to fetch Baraka scores: $e');
+        });
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[Home] fetchDiscoverUsers ERROR: $e');
+      debugPrint('[Home] fetchDiscoverUsers STACK: $stackTrace');
+      
+      // Extract detailed error info from DioException
+      if (e is DioException) {
+        debugPrint('[Home] fetchDiscoverUsers HTTP STATUS: ${e.response?.statusCode}');
+        debugPrint('[Home] fetchDiscoverUsers RESPONSE BODY: ${e.response?.data}');
+        debugPrint('[Home] fetchDiscoverUsers REQUEST URL: ${e.requestOptions.uri}');
+      }
+      
       hasError.value = true;
       isEmpty.value = true;
+      
+      // Show user-friendly error message
+      Helpers.showSnackbar(
+        message: 'Failed to load users. Please try again.',
+        isError: true,
+      );
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<List<UserModel>> _fetchPage(int page) async {
+    debugPrint('[Home] _fetchPage($page): params=${_filterParams}');
     final response = await _api.get(ApiConstants.search, queryParameters: {
       ..._filterParams,
       'page': page,
     });
     final data = response.data;
-    final list = data is List
-        ? data
-        : (data['users'] ?? data['results'] ?? []);
-    final users = (list as List).map((u) => UserModel.fromJson(u)).toList();
-    // Deduplicate
+    debugPrint('[Home] _fetchPage($page): response type=${data.runtimeType}');
+
+    // Robustly extract the users list from various response shapes
+    List<dynamic> list;
+    if (data is List) {
+      list = data;
+    } else if (data is Map) {
+      list = (data['users'] ?? data['results'] ?? data['profiles'] ?? []) as List;
+    } else {
+      debugPrint('[Home] _fetchPage($page): unexpected data=$data');
+      list = [];
+    }
+
+    final currentUser = _auth.currentUser.value;
+    final users = list
+        .whereType<Map<String, dynamic>>()
+        .map((u) => UserModel.fromJson(u))
+        .where((u) => u.id != currentUser?.id) // Filter out current user
+        .toList();
+    
+    // Deduplicate and filter out already seen users
     users.removeWhere((u) => _seenUserIds.contains(u.id));
     if (users.isEmpty) _hasMore.value = false;
+    debugPrint('[Home] _fetchPage($page): parsed ${users.length} users after filtering');
     return users;
   }
 
   Future<void> loadMoreUsers() async {
     if (_isLoadingMore.value || !_hasMore.value) return;
     _isLoadingMore.value = true;
+    debugPrint('[Home] loadMoreUsers: page=${_page.value + 1}');
     try {
       _page.value++;
       final moreUsers = await _fetchPage(_page.value);
@@ -158,44 +245,86 @@ class HomeController extends GetxController {
         _seenUserIds.add(u.id);
       }
       discoverUsers.addAll(moreUsers);
-    } catch (_) {}
-    finally {
+      debugPrint('[Home] loadMoreUsers: loaded ${moreUsers.length} more users');
+      // Fetch Baraka for new users
+      if (moreUsers.isNotEmpty) {
+        _fetchBulkBaraka(moreUsers.map((u) => u.id).toList());
+      }
+    } catch (e) {
+      debugPrint('[Home] loadMoreUsers ERROR: $e');
+      // Revert page increment on failure so retry fetches the same page
+      _page.value--;
+    } finally {
       _isLoadingMore.value = false;
     }
   }
 
   Future<void> likeUser(String userId) async {
+    debugPrint('[Home] likeUser: $userId');
     try {
       final response = await _api.post(ApiConstants.swipe, data: {
         'targetUserId': userId,
         'action': 'like',
       });
       final isMatch = response.data?['matched'] ?? false;
+      debugPrint('[Home] likeUser response: matched=$isMatch');
+      _removeCurrentCard();
       if (isMatch) {
+        final matchedUser = discoverUsers.firstWhereOrNull((u) => u.id == userId)
+            ?? lastSwipedUser.value;
         Get.toNamed(AppRoutes.matchFound, arguments: {
-          'user': discoverUsers.firstWhereOrNull((u) => u.id == userId),
+          'user': matchedUser,
         });
       }
-      _removeCurrentCard();
     } catch (e) {
-      Helpers.showSnackbar(message: 'Failed to like', isError: true);
+      debugPrint('[Home] likeUser ERROR: $e');
+      Helpers.showSnackbar(message: Helpers.extractErrorMessage(e), isError: true);
     }
   }
 
 
 
 
+  Future<void> superLikeUser(String userId) async {
+    debugPrint('[Home] superLikeUser: $userId');
+    try {
+      final response = await _api.post(ApiConstants.swipe, data: {
+        'targetUserId': userId,
+        'action': 'super_like',
+      });
+      final isMatch = response.data?['matched'] ?? false;
+      debugPrint('[Home] superLikeUser response: matched=$isMatch');
+      _removeCurrentCard();
+      if (isMatch) {
+        final matchedUser = discoverUsers.firstWhereOrNull((u) => u.id == userId)
+            ?? lastSwipedUser.value;
+        Get.toNamed(AppRoutes.matchFound, arguments: {
+          'user': matchedUser,
+        });
+      }
+    } catch (e) {
+      debugPrint('[Home] superLikeUser ERROR: $e');
+      Helpers.showSnackbar(message: Helpers.extractErrorMessage(e), isError: true);
+    }
+  }
+
   Future<void> passUser(String userId) async {
+    debugPrint('[Home] passUser: $userId');
     try {
       await _api.post(ApiConstants.swipe, data: {
         'targetUserId': userId,
         'action': 'pass',
       });
       _removeCurrentCard();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[Home] passUser ERROR: $e');
+      // Still remove the card — pass failures shouldn't block swiping
+      _removeCurrentCard();
+    }
   }
 
   Future<void> complimentUser(String userId, String message) async {
+    debugPrint('[Home] complimentUser: $userId');
     try {
       final response = await _api.post(ApiConstants.swipe, data: {
         'targetUserId': userId,
@@ -203,14 +332,20 @@ class HomeController extends GetxController {
         'complimentMessage': message,
       });
       final isMatch = response.data?['matched'] ?? false;
+      debugPrint('[Home] complimentUser response: matched=$isMatch');
+      _removeCurrentCard();
       if (isMatch) {
+        final matchedUser = discoverUsers.firstWhereOrNull((u) => u.id == userId)
+            ?? lastSwipedUser.value;
         Get.toNamed(AppRoutes.matchFound, arguments: {
-          'user': discoverUsers.firstWhereOrNull((u) => u.id == userId),
+          'user': matchedUser,
         });
       }
-      _removeCurrentCard();
     } catch (e) {
-      Helpers.showSnackbar(message: 'Failed to send compliment', isError: true);
+      debugPrint('[Home] complimentUser ERROR: $e');
+      // Still remove on error
+      _removeCurrentCard();
+      Helpers.showSnackbar(message: Helpers.extractErrorMessage(e), isError: true);
     }
   }
 
@@ -232,6 +367,7 @@ class HomeController extends GetxController {
       }
     }
   }
+
 
   Future<void> rewindLastSwipe() async {
     if (lastSwipedUser.value == null) {
@@ -315,6 +451,60 @@ class HomeController extends GetxController {
     } catch (_) {}
   }
 
+  // ─── Categories & Stories ───────────────────────────
+  Future<void> fetchCategories() async {
+    try {
+      isLoadingCategories.value = true;
+      final response = await _api.get(ApiConstants.categories);
+      final list = response.data is List ? response.data : response.data['categories'] ?? [];
+      categories.value = (list as List).map((c) => CategoryModel.fromJson(c)).toList();
+    } catch (e) {
+      debugPrint('[Home] fetchCategories error: $e');
+    } finally {
+      isLoadingCategories.value = false;
+    }
+  }
+
+  Future<void> fetchSuccessStories() async {
+    try {
+      isLoadingStories.value = true;
+      final response = await _api.get(ApiConstants.successStories);
+      final list = response.data is List ? response.data : response.data['stories'] ?? [];
+      successStories.value = (list as List).map((s) => SuccessStoryModel.fromJson(s)).toList();
+    } catch (e) {
+      debugPrint('[Home] fetchSuccessStories error: $e');
+    } finally {
+      isLoadingStories.value = false;
+    }
+  }
+
+  Future<void> selectCategory(String categoryId) async {
+    if (selectedCategoryId.value == categoryId) {
+      selectedCategoryId.value = ''; // Deselect
+      fetchDiscoverUsers();
+      return;
+    }
+    selectedCategoryId.value = categoryId;
+    fetchUsersByCategory(categoryId);
+  }
+
+  Future<void> fetchUsersByCategory(String categoryId) async {
+    isLoading.value = true;
+    _page.value = 1;
+    _seenUserIds.clear();
+    try {
+      final response = await _api.get(ApiConstants.categoryUsers(categoryId));
+      final list = response.data is List ? response.data : response.data['users'] ?? [];
+      discoverUsers.value = (list as List).map((u) => UserModel.fromJson(u)).toList();
+      isEmpty.value = discoverUsers.isEmpty;
+    } catch (e) {
+      debugPrint('[Home] fetchUsersByCategory error: $e');
+      hasError.value = true;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   void dismissDailyInsight() {
     dailyInsightDismissed.value = true;
   }
@@ -327,7 +517,7 @@ class HomeController extends GetxController {
   }
 
   void openFilter() => Get.toNamed(AppRoutes.filter);
-  void openNotifications() => Get.toNamed(AppRoutes.notifications);
+  void openNotifications() => _notificationService.openNotifications();
   void openProfile() => Get.toNamed(AppRoutes.profile);
 
   bool get canRewind => _monetization.canRewind.value && lastSwipedUser.value != null;

@@ -10,10 +10,24 @@ class Validators {
     return null;
   }
 
+  static String? loginIdentifier(String? value) {
+    if (value == null || value.isEmpty) return 'identifier_required'.tr;
+    // Simple check: if it contains @, treat as email, else as username
+    if (value.contains('@')) {
+      return email(value);
+    }
+    // Else check as username
+    if (value.length < 3) return 'username_min'.tr;
+    final regex = RegExp(r'^[a-zA-Z0-9_]+$');
+    if (!regex.hasMatch(value)) return 'username_format'.tr;
+    return null;
+  }
+
   static String? password(String? value) {
     if (value == null || value.isEmpty) return 'password_required'.tr;
     if (value.length < 8) return 'password_min_length'.tr;
     if (!RegExp(r'[A-Z]').hasMatch(value)) return 'password_uppercase'.tr;
+    if (!RegExp(r'[a-z]').hasMatch(value)) return 'password_lowercase'.tr;
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'password_number'.tr;
     return null;
   }

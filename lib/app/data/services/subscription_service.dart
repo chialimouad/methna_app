@@ -47,7 +47,7 @@ class SubscriptionService extends GetxService {
       await _api.post(ApiConstants.subscriptionCreate, data: {
         'plan': plan,
         'durationDays': durationDays,
-        'paymentReference': ?paymentReference,
+        if (paymentReference != null) 'paymentReference': paymentReference,
       });
       await fetchMySubscription();
       return true;

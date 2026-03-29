@@ -1,416 +1,284 @@
+// AGENTIC_STABILIZATION_V2
 import 'package:flutter/material.dart';
-import 'package:methna_app/core/widgets/animated_empty_state.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:methna_app/app/controllers/chat_controller.dart';
 import 'package:methna_app/app/data/models/conversation_model.dart';
 import 'package:methna_app/app/data/models/user_model.dart';
 import 'package:methna_app/app/data/services/auth_service.dart';
-import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:methna_app/core/utils/helpers.dart';
-import 'package:methna_app/core/widgets/loading_widget.dart';
+import 'package:methna_app/core/utils/cloudinary_url.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/core/widgets/islamic_pattern_painter.dart';
+import 'dart:math';
 
 class ChatListScreen extends GetView<ChatController> {
   const ChatListScreen({super.key});
 
-  static const _purple = AppColors.primary;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.backgroundDark : Colors.white;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Top bar: logo + Chats + search + menu ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryLight],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(LucideIcons.heart,
-                        size: 16, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'chats'.tr,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(LucideIcons.search,
-                        size: 22, color: textColor),
-                    onPressed: () {
-                      Get.dialog(
-                        AlertDialog(
-                          title: Text('Search Chats'.tr),
-                          content: TextField(
-                            onChanged: (v) => controller.searchConversations(v),
-                            decoration: InputDecoration(
-                              hintText: 'Enter name...'.tr,
-                              prefixIcon: const Icon(LucideIcons.search),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(onPressed: () { controller.searchConversations(''); Get.back(); }, child: Text('done'.tr)),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(LucideIcons.moreVertical,
-                        size: 22, color: textColor),
-                    onPressed: () {
-                      Get.bottomSheet(
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceDark : Colors.white,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ListTile(
-                                leading: const Icon(LucideIcons.checkCheck, color: AppColors.primary),
-                                title: Text('Mark all as read'.tr, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
-                                onTap: () {
-                                  // Call backend logic here or simply dismiss for now since it's mock UI
-                                  Helpers.showSnackbar(message: 'All chats marked as read');
-                                  Get.back();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Now Active section ──
-            Obx(() {
-              if (controller.onlineTodayUsers.isEmpty) {
-                return const SizedBox();
-              }
-              return Column(
-                children: [
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'now_active'.tr,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                          ),
-                        ),
-                        Text(
-                          'see_all'.tr,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _purple,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 72,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: controller.onlineTodayUsers.length,
-                      separatorBuilder: (_, i) =>
-                          const SizedBox(width: 14),
-                      itemBuilder: (context, index) {
-                        final user =
-                            controller.onlineTodayUsers[index];
-                        return _ActiveAvatar(
-                            user: user, index: index);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              );
-            }),
-
-            // ── Conversations list ──
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value &&
-                    controller.conversations.isEmpty) {
-                  return const LoadingWidget();
-                }
-                if (controller.hasError.value && controller.conversations.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
-                        const SizedBox(height: 16),
-                        Text('Could not load chats', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
-                        const SizedBox(height: 8),
-                        Text('Check your connection and try again', style: TextStyle(fontSize: 13, color: secondaryColor)),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: controller.fetchConversations,
-                          icon: const Icon(LucideIcons.refreshCw, size: 16),
-                          label: const Text('Retry'),
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                if (controller.conversations.isEmpty) {
-                  return AnimatedEmptyState(
-                    lottieAsset: 'assets/animations/no_chat.json',
-                    title: 'no_conversations'.tr,
-                    subtitle: 'start_chatting'.tr,
-                    fallbackIcon: LucideIcons.messageSquare,
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: controller.fetchConversations,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: controller.filteredConversations.length,
-                    itemBuilder: (context, index) {
-                      final conv = controller.filteredConversations[index];
-                      return _ChatTile(
-                        conversation: conv,
-                        isDark: isDark,
-                        textColor: textColor,
-                        secondaryColor: secondaryColor,
-                        onTap: () =>
-                            controller.openConversation(conv),
-                      );
-                    },
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Active user avatar with gradient ring ────────────────────────────────
-class _ActiveAvatar extends StatelessWidget {
-  final UserModel user;
-  final int index;
-  const _ActiveAvatar({required this.user, required this.index});
-
-  static const _ringColors = [
-    [Color(0xFFFF6B6B), Color(0xFFFFD93D)],
-    [AppColors.primary, AppColors.primaryLight],
-    [Color(0xFF00C9FF), Color(0xFF92FE9D)],
-    [Color(0xFFFC5C7D), Color(0xFF6A82FB)],
-    [Color(0xFFF7971E), Color(0xFFFFD200)],
+  static final List<Color> avatarColors = [
+    AppColors.emerald.withValues(alpha: 0.1),
+    AppColors.gold.withValues(alpha: 0.1),
+    const Color(0xFFE0D4FF).withValues(alpha: 0.1),
+    const Color(0xFFFFD4C4).withValues(alpha: 0.1),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final colors = _ringColors[index % _ringColors.length];
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Theme.of(context).scaffoldBackgroundColor,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: ClipOval(
-              child: user.mainPhotoUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: user.mainPhotoUrl!,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: AppColors.primarySurface,
-                      child: Center(
-                        child: Text(
-                          Helpers.getInitials(
-                              user.firstName, user.lastName),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.backgroundDark : const Color(0xFFF9F6F2);
+    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
+    return Scaffold(
+      backgroundColor: bg,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: IslamicPatternWidget(
+              opacity: isDark ? 0.03 : 0.05,
+              color: isDark ? Colors.white : AppColors.emerald,
             ),
           ),
-        ),
+          
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.goldPremiumGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(LucideIcons.messageCircle, color: AppColors.secondary, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'conversations'.tr,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(LucideIcons.search, color: AppColors.gold, size: 24),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isLoading.value && controller.conversations.isEmpty) {
+                      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+                    }
+                    
+                    return RefreshIndicator(
+                      onRefresh: () => controller.fetchConversations(),
+                      child: ListView(
+                        children: [
+                          _buildLiveSection(textColor, isDark),
+                          const SizedBox(height: 16),
+                          _buildChatListSection(context),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLiveSection(Color textColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Live today', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w800)),
+              const Text('See all', style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 100,
+          child: Obx(() {
+            if (controller.onlineTodayUsers.isEmpty) return const SizedBox.shrink();
+            return ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              scrollDirection: Axis.horizontal,
+              itemCount: min(controller.onlineTodayUsers.length, 15),
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final user = controller.onlineTodayUsers[index];
+                return _ActiveUserItem(
+                  user: user, 
+                  bgColor: avatarColors[index % avatarColors.length]
+                );
+              },
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChatListSection(BuildContext context) {
+    return Obx(() {
+      if (controller.conversations.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: 100),
+            child: Text('No conversations yet', style: TextStyle(color: Colors.grey)),
+          ),
+        );
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: controller.conversations.length,
+        itemBuilder: (context, index) {
+          return _ChatTile(
+            conversation: controller.conversations[index],
+            avatarBg: avatarColors[(index + 2) % avatarColors.length],
+          );
+        },
+      );
+    });
+  }
+}
+
+class _ActiveUserItem extends StatelessWidget {
+  final UserModel user;
+  final Color bgColor;
+  const _ActiveUserItem({required this.user, required this.bgColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(gradient: AppColors.goldPremiumGradient, shape: BoxShape.circle),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                  child: ClipOval(
+                    child: user.mainPhotoUrl != null
+                        ? CachedNetworkImage(imageUrl: CloudinaryUrl.thumbnail(user.mainPhotoUrl!), fit: BoxFit.cover)
+                        : const Icon(LucideIcons.user, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 2, bottom: 2,
+              child: Container(
+                width: 14, height: 14,
+                decoration: BoxDecoration(color: AppColors.emerald, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(user.firstName ?? 'User', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }
 
-// ─── Conversation tile ────────────────────────────────────────────────────
 class _ChatTile extends StatelessWidget {
   final ConversationModel conversation;
-  final bool isDark;
-  final Color textColor;
-  final Color secondaryColor;
-  final VoidCallback onTap;
-
-  const _ChatTile({
-    required this.conversation,
-    required this.isDark,
-    required this.textColor,
-    required this.secondaryColor,
-    required this.onTap,
-  });
+  final Color avatarBg;
+  const _ChatTile({required this.conversation, required this.avatarBg});
 
   @override
   Widget build(BuildContext context) {
     final other = conversation.otherUser;
     final userId = Get.find<AuthService>().userId ?? '';
     final unread = conversation.unreadCount(userId);
-
+    final lastMsg = conversation.lastMessageContent;
+    final time = conversation.lastMessageAt != null
+        ? Helpers.timeAgo(conversation.lastMessageAt!)
+        : '';
+    
     return InkWell(
-      onTap: onTap,
+      onTap: () => Get.find<ChatController>().openConversation(conversation),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            // Avatar
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.primarySurface,
-              backgroundImage: other?.mainPhotoUrl != null
-                  ? CachedNetworkImageProvider(other!.mainPhotoUrl!)
-                  : null,
-              child: other?.mainPhotoUrl == null
-                  ? Text(
-                      Helpers.getInitials(
-                          other?.firstName, other?.lastName),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                        fontSize: 14,
-                      ),
-                    )
-                  : null,
+            Stack(
+              children: [
+                Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(color: avatarBg, shape: BoxShape.circle),
+                  child: ClipOval(
+                    child: other?.mainPhotoUrl != null
+                        ? CachedNetworkImage(imageUrl: CloudinaryUrl.thumbnail(other!.mainPhotoUrl!), fit: BoxFit.cover)
+                        : const Icon(LucideIcons.user, color: Colors.white),
+                  ),
+                ),
+                if (other?.isOnline ?? false)
+                  Positioned(
+                    right: 0, bottom: 0,
+                    child: Container(
+                      width: 14, height: 14,
+                      decoration: BoxDecoration(color: AppColors.emerald, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 14),
-
-            // Name + message
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(other?.fullName ?? 'User', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  const SizedBox(height: 4),
                   Text(
-                    other?.displayName ?? 'User',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight:
-                          unread > 0 ? FontWeight.w700 : FontWeight.w600,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    conversation.lastMessageContent ??
-                        'start_conversation'.tr,
+                    lastMsg ?? 'No messages yet',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: secondaryColor,
-                    ),
+                    style: TextStyle(color: unread > 0 ? Colors.black : Colors.grey, fontWeight: unread > 0 ? FontWeight.bold : FontWeight.normal),
                   ),
                 ],
               ),
             ),
-
-            // Time + unread badge
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  conversation.lastMessageAt != null
-                      ? Helpers.timeAgo(conversation.lastMessageAt!)
-                      : '',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: secondaryColor,
+                if (time.isNotEmpty)
+                  Text(
+                    time,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
-                ),
-                if (unread > 0) ...[
-                  const SizedBox(height: 6),
+                if (unread > 0)
                   Container(
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        unread > 99 ? '99+' : '$unread',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(10)),
+                    child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
-                ],
               ],
             ),
           ],

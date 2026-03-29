@@ -7,6 +7,14 @@ import 'package:methna_app/core/widgets/animated_icons.dart';
 
 class Helpers {
   Helpers._();
+  
+  /// Get localized back icon (chevrons flip in RTL)
+  static IconData get backIcon =>
+      Get.locale?.languageCode == 'ar' ? LucideIcons.chevronRight : LucideIcons.chevronLeft;
+
+  /// Get localized forward icon
+  static IconData get nextIcon =>
+      Get.locale?.languageCode == 'ar' ? LucideIcons.chevronLeft : LucideIcons.chevronRight;
 
   /// Extract a user-friendly error message from any exception (especially Dio)
   static String extractErrorMessage(dynamic e) {
@@ -87,6 +95,10 @@ class Helpers {
     bool isError = false,
     Duration duration = const Duration(seconds: 3),
   }) {
+    if (Get.context == null) {
+      debugPrint('[SNACKBAR SKIPPED - NO CONTEXT] ${title ?? (isError ? "Error" : "Success")}: $message');
+      return;
+    }
     Get.snackbar(
       title ?? (isError ? 'error'.tr : 'success'.tr),
       message,
@@ -107,6 +119,10 @@ class Helpers {
 
   /// Show loading dialog
   static void showLoading({String? message}) {
+    if (Get.context == null) {
+      debugPrint('[LOADING SKIPPED - NO CONTEXT] $message');
+      return;
+    }
     final isDark = Get.isDarkMode;
     Get.dialog(
       PopScope(
@@ -346,5 +362,63 @@ class Helpers {
     if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
     if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
     return count.toString();
+  }
+
+  /// Capitalize first letter of a string
+  static String capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  /// Get country flag emoji from country name
+  static String getCountryFlag(String? countryName) {
+    if (countryName == null || countryName.isEmpty) return '🌍';
+    
+    final name = countryName.toLowerCase().trim();
+    
+    // Common mappings
+    final Map<String, String> flags = {
+      'algeria': '🇩🇿',
+      'morocco': '🇲🇦',
+      'tunisia': '🇹🇳',
+      'libya': '🇱🇾',
+      'egypt': '🇪🇬',
+      'france': '🇫🇷',
+      'canada': '🇨🇦',
+      'usa': '🇺🇸',
+      'united states': '🇺🇸',
+      'united kingdom': '🇬🇧',
+      'uk': '🇬🇧',
+      'germany': '🇩🇪',
+      'spain': '🇪🇸',
+      'italy': '🇮🇹',
+      'saudi arabia': '🇸🇦',
+      'uae': '🇦🇪',
+      'qatar': '🇶🇦',
+      'kuwait': '🇰🇼',
+      'turkey': '🇹🇷',
+      'syria': '🇸🇾',
+      'lebanon': '🇱🇧',
+      'jordan': '🇯🇴',
+      'palestine': '🇵🇸',
+    };
+
+    return flags[name] ?? '🌍';
+  }
+
+  /// Alias for getCountryFlag
+  static String countryToEmoji(String? countryName) => getCountryFlag(countryName);
+
+  /// Parse hex color string to Color object
+  static Color parseColor(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        hexColor = 'FF$hexColor';
+      }
+      return Color(int.parse(hexColor, radix: 16));
+    } catch (e) {
+      return const Color(0xFFE91E63); // Default to primary pink
+    }
   }
 }

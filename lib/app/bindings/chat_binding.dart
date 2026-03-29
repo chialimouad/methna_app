@@ -4,6 +4,8 @@ import 'package:methna_app/app/controllers/chat_controller.dart';
 class ChatBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put(ChatController());
+    if (!Get.isRegistered<ChatController>()) {
+      Get.put(ChatController(), permanent: true);
+    }
   }
 }

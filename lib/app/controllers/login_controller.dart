@@ -19,16 +19,18 @@ class LoginController extends GetxController {
 
   Future<void> login() async {
     if (!formKey.currentState!.validate()) return;
+    if (isLoading.value) return; // prevent double tap
 
     isLoading.value = true;
+    debugPrint('[Login] login attempt: ${emailController.text.trim()}');
     try {
       await _auth.login(
         emailController.text.trim(),
         passwordController.text,
       );
-      isLoading.value = false;
+      debugPrint('[Login] login SUCCESS');
       
-      // Use Lottie success dialog
+      // Keep isLoading true to block further taps during transition
       Helpers.showLottieDialog(
         lottieAsset: 'assets/animations/success.json',
         title: 'Log in Successful!',
@@ -43,9 +45,9 @@ class LoginController extends GetxController {
       
     } catch (e) {
       final message = _extractError(e);
+      debugPrint('[Login] login FAILED: $message');
       isLoading.value = false;
       
-      // Use Lottie error dialog
       Helpers.showLottieDialog(
         lottieAsset: 'assets/animations/error.json',
         title: 'Login Failed',

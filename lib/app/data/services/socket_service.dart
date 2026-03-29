@@ -1,26 +1,57 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:methna_app/core/constants/api_constants.dart';
 import 'package:methna_app/app/data/services/storage_service.dart';
 import 'package:methna_app/app/data/services/notification_service.dart';
+import 'package:methna_app/app/data/services/message_queue_service.dart';
 import 'package:methna_app/app/data/models/notification_model.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class SocketService extends GetxService {
+class SocketService extends GetxService with WidgetsBindingObserver {
   io.Socket? _chatSocket;
   io.Socket? _notifSocket;
   final StorageService _storage = Get.find<StorageService>();
   final RxBool isConnected = false.obs;
+  final RxBool isReconnecting = false.obs;
+
+  // Exponential backoff state
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 10;
+  static const int _baseDelayMs = 1000;
+  static const int _maxDelayMs = 32000;
 
   Future<SocketService> init() async {
+    WidgetsBinding.instance.addObserver(this);
     return this;
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _reconnectTimer?.cancel();
+    disconnect();
+    super.onClose();
+  }
+
+  // ─── App Lifecycle ─────────────────────────────────────────
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[Socket] App resumed - attempting reconnect');
+      _attemptReconnect();
+    }
   }
 
   Future<void> connect() async {
     final token = await _storage.getToken();
     if (token == null) return;
+
+    // Disconnect existing sockets before reconnecting
+    disconnect();
 
     // ─── Chat Socket (default namespace) ─────────────────
     _chatSocket = io.io(
@@ -37,14 +68,22 @@ class SocketService extends GetxService {
 
     _chatSocket!.onConnect((_) {
       isConnected.value = true;
+      isReconnecting.value = false;
+      _reconnectAttempts = 0;
+      debugPrint('[Socket] Connected successfully');
+      _flushMessageQueue();
     });
 
     _chatSocket!.onDisconnect((_) {
       isConnected.value = false;
+      debugPrint('[Socket] Disconnected');
+      _scheduleReconnect();
     });
 
-    _chatSocket!.onConnectError((_) {
+    _chatSocket!.onConnectError((error) {
       isConnected.value = false;
+      debugPrint('[Socket] Connection error: $error');
+      _scheduleReconnect();
     });
 
     // ─── Notification Socket (/notifications namespace) ──
@@ -65,13 +104,71 @@ class SocketService extends GetxService {
   }
 
   void disconnect() {
-    _chatSocket?.disconnect();
-    _chatSocket?.dispose();
+    _reconnectTimer?.cancel();
+    try { _chatSocket?.disconnect(); } catch (_) {}
+    try { _chatSocket?.dispose(); } catch (_) {}
     _chatSocket = null;
-    _notifSocket?.disconnect();
-    _notifSocket?.dispose();
+    try { _notifSocket?.disconnect(); } catch (_) {}
+    try { _notifSocket?.dispose(); } catch (_) {}
     _notifSocket = null;
     isConnected.value = false;
+    isReconnecting.value = false;
+  }
+
+  // ─── Exponential Backoff Reconnect ─────────────────────────
+
+  void _scheduleReconnect() {
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      debugPrint('[Socket] Max reconnect attempts reached');
+      isReconnecting.value = false;
+      return;
+    }
+
+    _reconnectTimer?.cancel();
+    isReconnecting.value = true;
+
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s (capped)
+    final delayMs = (_baseDelayMs * (1 << _reconnectAttempts)).clamp(_baseDelayMs, _maxDelayMs);
+    debugPrint('[Socket] Scheduling reconnect in ${delayMs}ms (attempt ${_reconnectAttempts + 1})');
+
+    _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
+      _reconnectAttempts++;
+      _attemptReconnect();
+    });
+  }
+
+  void _attemptReconnect() async {
+    if (isConnected.value) return;
+    
+    final token = await _storage.getToken();
+    if (token == null) {
+      debugPrint('[Socket] No token - cannot reconnect');
+      return;
+    }
+
+    debugPrint('[Socket] Attempting reconnect...');
+    connect();
+  }
+
+  void _flushMessageQueue() {
+    try {
+      if (Get.isRegistered<MessageQueueService>()) {
+        final queue = Get.find<MessageQueueService>();
+        if (queue.pendingCount > 0) {
+          debugPrint('[Socket] Flushing ${queue.pendingCount} queued messages');
+          queue.flushQueue();
+        }
+      }
+    } catch (e) {
+      debugPrint('[Socket] Queue flush error: $e');
+    }
+  }
+
+  /// Force reconnect (public API)
+  void forceReconnect() {
+    _reconnectAttempts = 0;
+    disconnect();
+    _attemptReconnect();
   }
 
   // ─── Real-time Notification Handlers ───────────────────
@@ -156,13 +253,26 @@ class SocketService extends GetxService {
 
   // ─── Chat Emit Events ─────────────────────────────────────
   void emit(String event, [dynamic data]) {
-    _chatSocket?.emit(event, data);
+    if (_chatSocket == null || !isConnected.value) {
+      debugPrint('[Socket] emit($event) skipped — not connected');
+      return;
+    }
+    _chatSocket!.emit(event, data);
   }
 
   void sendMessage(String conversationId, String content) {
     emit('sendMessage', {
       'conversationId': conversationId,
       'content': content,
+    });
+  }
+
+  /// Send message with client-generated ID for duplicate prevention and tracking
+  void sendMessageWithId(String conversationId, String content, String clientMsgId) {
+    emit('sendMessage', {
+      'conversationId': conversationId,
+      'content': content,
+      'clientMsgId': clientMsgId,
     });
   }
 

@@ -5,7 +5,11 @@ import 'package:methna_app/app/controllers/settings_controller.dart';
 class ProfileBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put(ProfileController());
-    Get.put(SettingsController());
+    if (!Get.isRegistered<ProfileController>()) {
+      Get.put(ProfileController(), permanent: true);
+    }
+    if (!Get.isRegistered<SettingsController>()) {
+      Get.put(SettingsController(), permanent: true);
+    }
   }
 }

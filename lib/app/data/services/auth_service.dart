@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:methna_app/app/routes/app_routes.dart';
 import 'package:methna_app/core/constants/api_constants.dart';
 import 'package:methna_app/app/data/services/api_service.dart';
 import 'package:methna_app/app/data/services/storage_service.dart';
@@ -32,8 +35,16 @@ class AuthService extends GetxService {
     currentUser.value = user;
     await _storage.saveUser(data['user']);
     isLoggedIn.value = true;
+
+    // Hydrate user data to ensure all nested fields are synced
+    try {
+      await fetchMe();
+    } catch (e) {
+      debugPrint('[AuthService] Login hydration failed: $e');
+    }
+
     _onAuthenticated();
-    return user;
+    return currentUser.value!;
   }
 
   // ─── Register ──────────────────────────────────────────────
@@ -85,6 +96,15 @@ class AuthService extends GetxService {
         currentUser.value = user;
         await _storage.saveUser(data['user']);
         isLoggedIn.value = true;
+
+        // Hydrate user data to ensure all nested fields are synced
+        try {
+          await fetchMe();
+        } catch (e) {
+          debugPrint('[AuthService] OTP hydration failed: $e');
+        }
+
+        _onAuthenticated();
       }
     }
     return data;
@@ -121,10 +141,15 @@ class AuthService extends GetxService {
     await _storage.saveUser(response.data);
     return user;
   }
-
-  // ─── Update FCM Token ──────────────────────────────────────
-  Future<void> updateFcmToken(String fcmToken) async {
-    await _api.patch(ApiConstants.updateFcmToken, data: {'fcmToken': fcmToken});
+  
+  // ─── Check Username Availability ──────────────────────────
+  Future<bool> checkUsernameAvailability(String username) async {
+    try {
+      final response = await _api.get(ApiConstants.checkUsername, queryParameters: {'username': username});
+      return response.data['available'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ─── Logout ────────────────────────────────────────────────
@@ -144,19 +169,33 @@ class AuthService extends GetxService {
   Future<bool> tryRestoreSession() async {
     final token = await _storage.getToken();
     if (token == null) return false;
+    
     try {
+      debugPrint('[AuthService] Restoring session via fetchMe...');
       await fetchMe();
       isLoggedIn.value = true;
       _onAuthenticated();
       return true;
-    } catch (_) {
-      await _storage.clearTokens();
+    } catch (e) {
+      debugPrint('[AuthService] Session restoration failed: $e');
+      // If it's a 401, the ApiService already tried to refresh.
+      // If it's still failing, the session is dead.
+      if (e is DioException && e.response?.statusCode == 401) {
+        await _storage.clearTokens();
+        isLoggedIn.value = false;
+      }
       return false;
     }
   }
 
   // ─── Post-auth setup: socket, notifications, monetization ──
   void _onAuthenticated() {
+    final route = Get.currentRoute;
+    if (route.contains('signup') || route == AppRoutes.splash) {
+      debugPrint('[AuthService] Deferring background services - currently in signup/splash');
+      return;
+    }
+
     try {
       Get.find<SocketService>().connect();
       Get.find<NotificationService>().fetchNotifications();

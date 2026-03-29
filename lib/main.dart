@@ -9,10 +9,16 @@ import 'package:methna_app/app/data/services/api_service.dart';
 import 'package:methna_app/app/data/services/socket_service.dart';
 import 'package:methna_app/app/data/services/location_service.dart';
 import 'package:methna_app/app/data/services/notification_service.dart';
+import 'package:methna_app/app/data/services/message_queue_service.dart';
+import 'package:methna_app/app/data/services/permission_service.dart';
+import 'package:methna_app/app/data/services/connectivity_service.dart';
+import 'package:methna_app/app/data/services/content_service.dart';
 import 'package:methna_app/app/routes/app_pages.dart';
 import 'package:methna_app/app/theme/app_theme.dart';
 import 'package:methna_app/app/translations/app_translations.dart';
 import 'package:methna_app/core/constants/app_constants.dart';
+import 'package:methna_app/core/constants/api_constants.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +42,9 @@ Future<void> main() async {
   // Initialize core services before app starts
   await _initServices();
 
+  // Initialize Stripe
+  Stripe.publishableKey = ApiConstants.stripePublishableKey;
+
   runApp(const MethnaApp());
 }
 
@@ -45,11 +54,15 @@ Future<void> _initServices() async {
   await Get.putAsync(() => SocketService().init(), permanent: true);
   await Get.putAsync(() => LocationService().init(), permanent: true);
   await Get.putAsync(() => NotificationService().init(), permanent: true);
+  await Get.putAsync(() => MessageQueueService().init(), permanent: true);
+  await Get.putAsync(() => PermissionService().init(), permanent: true);
+  await Get.putAsync(() => ConnectivityService().init(), permanent: true);
+  await Get.putAsync(() => ContentService().init(), permanent: true);
 
   // Initialize locale controller (depends on StorageService)
   Get.put(LocaleController(), permanent: true);
 }
-
+ 
 Locale _getSavedLocale(StorageService storage) {
   final code = storage.getString('app_language');
   if (code != null && code.contains('_')) {

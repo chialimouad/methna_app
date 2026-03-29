@@ -11,27 +11,25 @@ import 'package:methna_app/screens/main/profile/profile_screen.dart';
 class MainScreen extends GetView<NavigationController> {
   const MainScreen({super.key});
 
+  static final List<Widget> _pages = [
+    const HomeScreen(),
+    const UsersScreen(),
+    const ChatListScreen(),
+    const ProfileScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      const HomeScreen(),
-      const UsersScreen(),
-      const ChatListScreen(),
-      const ProfileScreen(),
-    ];
-
     return Obx(() {
-      // Use light status bar icons on home (full-screen image), dark on others
       final isHome = controller.currentIndex.value == 0;
       return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isHome
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        value: isHome ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
         child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           extendBody: true,
           body: IndexedStack(
             index: controller.currentIndex.value,
-            children: pages,
+            children: _pages,
           ),
           bottomNavigationBar: const AppBottomNavBar(),
         ),

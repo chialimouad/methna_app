@@ -642,8 +642,7 @@ class _LocationPainter extends CustomPainter {
     final shadowW = size.width * 0.25;
     final shadowH = 6.0;
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.12 + 0.08 * (1 - _bounceY(bounceProgress).abs()))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..color = Colors.black.withValues(alpha: 0.12 + 0.08 * (1 - _bounceY(bounceProgress).abs()));
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, baseY + 4), width: shadowW, height: shadowH),
       shadowPaint,

@@ -4,6 +4,8 @@ import 'package:methna_app/app/controllers/users_controller.dart';
 class UsersBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put(UsersController());
+    if (!Get.isRegistered<UsersController>()) {
+      Get.put(UsersController(), permanent: true);
+    }
   }
 }

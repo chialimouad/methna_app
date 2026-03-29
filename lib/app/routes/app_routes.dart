@@ -17,6 +17,7 @@ abstract class AppRoutes {
   static const String signupProfileDetails = '/signup/profile-details';
   static const String signupBirthday = '/signup/birthday';
   static const String signupEmailVerification = '/signup/email-verification';
+  static const String signupEmailVerify = '/signup/email-verification';
   static const String signupFaithReligion = '/signup/faith-religion';
   static const String signupHobbies = '/signup/hobbies';
   static const String signupProfession = '/signup/profession';
@@ -36,8 +37,10 @@ abstract class AppRoutes {
   static const String search = '/search';
   static const String chatDetail = '/chat/detail';
   static const String notifications = '/notifications';
+  static const String whoLikedMe = '/who-liked-me';
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';
+  static const String enhancedEditProfile = '/edit-profile/enhanced';
   static const String userDetail = '/user-detail';
   static const String matchFound = '/match-found';
   static const String filter = '/filter';
@@ -48,7 +51,6 @@ abstract class AppRoutes {
   static const String accountSecurity = '/settings/account-security';
   static const String subscription = '/settings/subscription';
   static const String appAppearance = '/settings/app-appearance';
-  static const String thirdPartyIntegrations = '/settings/integrations';
   static const String dataAnalytics = '/settings/data-analytics';
   static const String helpSupport = '/settings/help-support';
   static const String notificationSettings = '/settings/notification-settings';
@@ -60,10 +62,14 @@ abstract class AppRoutes {
   static const String faq = '/settings/faq';
   static const String contactSupport = '/settings/contact-support';
   static const String appLanguage = '/settings/app-language';
+  static const String reportRequest = '/settings/report-request';
+  static const String termsConditions = '/settings/terms-conditions';
+  static const String privacyPolicy = '/settings/privacy-policy';
 
   // Profile Sub-screens
   static const String editProfileImages = '/profile/edit-images';
   static const String editProfileData = '/profile/edit-data';
+  static const String editProfilePhotos = '/profile/edit-photos';
 
   // Chat Sub-screens
   static const String messageSettings = '/message-settings';

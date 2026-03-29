@@ -21,16 +21,8 @@ class SearchRadarScreen extends StatelessWidget {
         children: [
           // ── Pink overlay background (simulating map) ──
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primaryDark,
-                  AppColors.primary,
-                  AppColors.primaryLight,
-                ],
-              ),
+            decoration: BoxDecoration(
+              gradient: AppColors.islamicGradient,
             ),
           ),
 
@@ -52,14 +44,14 @@ class SearchRadarScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFD4A574),
-                      width: 3,
+                      color: AppColors.gold,
+                      width: 4,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 15,
-                        spreadRadius: 2,
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        spreadRadius: 4,
                       ),
                     ],
                   ),
@@ -78,8 +70,8 @@ class SearchRadarScreen extends StatelessWidget {
                                     currentUser?.lastName),
                                 style: const TextStyle(
                                   fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.emerald,
                                 ),
                               ),
                             ),
@@ -178,7 +170,7 @@ class _AnimatedMapPinState extends State<_AnimatedMapPin>
               child: Icon(
                 LucideIcons.mapPin,
                 size: widget.size,
-                color: AppColors.primaryDark.withValues(alpha: opacity),
+                color: AppColors.gold.withValues(alpha: opacity),
               ),
             ),
           );

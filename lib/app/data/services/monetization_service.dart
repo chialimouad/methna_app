@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/data/services/api_service.dart';
 import 'package:methna_app/core/constants/api_constants.dart';
@@ -97,14 +99,42 @@ class MonetizationService extends GetxService {
   // ─── Purchase Subscription ──────────────────────────────
   Future<bool> purchaseSubscription(String plan, int durationDays, String paymentRef) async {
     try {
-      await _api.post(ApiConstants.purchaseSubscription, data: {
-        'plan': plan,
-        'durationDays': durationDays,
-        'paymentReference': paymentRef,
+      // 1. Get Payment Intent from Backend
+      final response = await _api.post(ApiConstants.paymentCreateIntent, data: {
+        'plan': plan.toUpperCase(),
+        'provider': 'stripe',
       });
+
+      final data = response.data;
+      // Backend returns { success, clientSecret, customerId, ephemeralKey } directly
+      if (data == null || data['clientSecret'] == null) {
+        debugPrint('[Monetization] Payment intent missing clientSecret');
+        return false;
+      }
+
+      // 2. Initialize Payment Sheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: data['clientSecret'],
+          customerEphemeralKeySecret: data['ephemeralKey'],
+          customerId: data['customerId'],
+          merchantDisplayName: 'Methna',
+          style: ThemeMode.system,
+        ),
+      );
+
+      // 3. Present Payment Sheet
+      await Stripe.instance.presentPaymentSheet();
+
+      // 4. Verify & Refresh
       await fetchStatus();
       return true;
-    } catch (_) {
+    } catch (e) {
+      if (e is StripeException) {
+        debugPrint('Stripe Error: ${e.error.localizedMessage}');
+      } else {
+        debugPrint('Purchase Error: $e');
+      }
       return false;
     }
   }

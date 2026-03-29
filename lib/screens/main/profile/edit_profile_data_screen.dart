@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:methna_app/app/controllers/profile_controller.dart';
 import 'package:methna_app/app/theme/app_colors.dart';
+import 'package:methna_app/core/utils/helpers.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class EditProfileDataScreen extends StatefulWidget {
-  const EditProfileDataScreen({super.key});
+/// Modern Edit Profile Screen with Enhanced UX
+/// Features: Section-based editing, real-time validation, modern UI
+class ModernEditProfileScreen extends StatefulWidget {
+  const ModernEditProfileScreen({super.key});
 
   @override
-  State<EditProfileDataScreen> createState() => _EditProfileDataScreenState();
+  State<ModernEditProfileScreen> createState() => _ModernEditProfileScreenState();
 }
 
-class _EditProfileDataScreenState extends State<EditProfileDataScreen> {
+class _ModernEditProfileScreenState extends State<ModernEditProfileScreen>
+    with TickerProviderStateMixin {
   final ProfileController controller = Get.find<ProfileController>();
-
+  late TabController _tabController;
+  
+  // Form controllers
   late final TextEditingController _firstNameCtrl;
   late final TextEditingController _lastNameCtrl;
   late final TextEditingController _phoneCtrl;
@@ -24,41 +30,88 @@ class _EditProfileDataScreenState extends State<EditProfileDataScreen> {
   late final TextEditingController _cityCtrl;
   late final TextEditingController _countryCtrl;
 
+  // Form state
   String? _gender;
   String? _maritalStatus;
   String? _education;
   String? _sect;
   String? _religiousLevel;
   String? _prayerFrequency;
+  String? _dietary;
+  String? _alcohol;
   DateTime? _dateOfBirth;
   List<String> _selectedInterests = [];
-  bool _saving = false;
+  bool _isSaving = false;
+  int _completionPercentage = 0;
+
+  final List<String> _interests = [
+    'Reading', 'Travel', 'Cooking', 'Sports', 'Music', 'Art',
+    'Gaming', 'Fitness', 'Nature', 'Photography', 'Writing',
+    'Movies', 'Technology', 'Fashion', 'Volunteering', 'Dancing'
+  ];
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _initializeFormData();
+    _calculateCompletion();
+  }
+
+  void _initializeFormData() {
     final user = controller.user.value;
-    _firstNameCtrl = TextEditingController(text: user?.firstName);
-    _lastNameCtrl = TextEditingController(text: user?.lastName);
-    _phoneCtrl = TextEditingController(text: user?.phone);
-    _bioCtrl = TextEditingController(text: user?.profile?.bio);
-    _heightCtrl = TextEditingController(text: user?.profile?.height?.toString());
-    _jobTitleCtrl = TextEditingController(text: user?.profile?.jobTitle);
-    _companyCtrl = TextEditingController(text: user?.profile?.company);
-    _cityCtrl = TextEditingController(text: user?.profile?.city);
-    _countryCtrl = TextEditingController(text: user?.profile?.country);
-    _gender = user?.profile?.gender;
-    _maritalStatus = user?.profile?.maritalStatus;
-    _education = user?.profile?.education;
-    _sect = user?.profile?.sect;
-    _religiousLevel = user?.profile?.religiousLevel;
-    _prayerFrequency = user?.profile?.prayerFrequency;
-    _dateOfBirth = user?.profile?.dateOfBirth;
-    _selectedInterests = List<String>.from(user?.profile?.interests ?? []);
+    final profile = user?.profile;
+    
+    _firstNameCtrl = TextEditingController(text: user?.firstName ?? '');
+    _lastNameCtrl = TextEditingController(text: user?.lastName ?? '');
+    _phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    _bioCtrl = TextEditingController(text: profile?.bio ?? '');
+    _heightCtrl = TextEditingController(text: profile?.height?.toString() ?? '');
+    _jobTitleCtrl = TextEditingController(text: profile?.jobTitle ?? '');
+    _companyCtrl = TextEditingController(text: profile?.company ?? '');
+    _cityCtrl = TextEditingController(text: profile?.city ?? '');
+    _countryCtrl = TextEditingController(text: profile?.country ?? '');
+    
+    _gender = profile?.gender;
+    _maritalStatus = profile?.maritalStatus;
+    _education = profile?.education;
+    _sect = profile?.sect;
+    _religiousLevel = profile?.religiousLevel;
+    _prayerFrequency = profile?.prayerFrequency;
+    _dietary = profile?.dietary;
+    _alcohol = profile?.alcohol;
+    _dateOfBirth = profile?.dateOfBirth;
+    _selectedInterests = List.from(profile?.interests ?? []);
+  }
+
+  void _calculateCompletion() {
+    int filled = 0;
+    int total = 15; // Total number of important fields
+    
+    if (_firstNameCtrl.text.isNotEmpty) filled++;
+    if (_lastNameCtrl.text.isNotEmpty) filled++;
+    if (_bioCtrl.text.isNotEmpty) filled++;
+    if (_gender != null) filled++;
+    if (_dateOfBirth != null) filled++;
+    if (_maritalStatus != null) filled++;
+    if (_education != null) filled++;
+    if (_jobTitleCtrl.text.isNotEmpty) filled++;
+    if (_heightCtrl.text.isNotEmpty) filled++;
+    if (_cityCtrl.text.isNotEmpty) filled++;
+    if (_religiousLevel != null) filled++;
+    if (_prayerFrequency != null) filled++;
+    if (_sect != null) filled++;
+    if (_dietary != null) filled++;
+    if (_selectedInterests.isNotEmpty) filled++;
+    
+    setState(() {
+      _completionPercentage = ((filled / total) * 100).round();
+    });
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -71,344 +124,757 @@ class _EditProfileDataScreenState extends State<EditProfileDataScreen> {
     super.dispose();
   }
 
-  int _calculateCompletion() {
-    int filled = 0;
-    const total = 14;
-    if (_bioCtrl.text.trim().isNotEmpty) filled++;
-    if (_gender != null && _gender!.isNotEmpty) filled++;
-    if (_maritalStatus != null && _maritalStatus!.isNotEmpty) filled++;
-    if (_heightCtrl.text.isNotEmpty) filled++;
-    if (_jobTitleCtrl.text.isNotEmpty) filled++;
-    if (_education != null && _education!.isNotEmpty) filled++;
-    if (_religiousLevel != null && _religiousLevel!.isNotEmpty) filled++;
-    if (_prayerFrequency != null && _prayerFrequency!.isNotEmpty) filled++;
-    if (_dateOfBirth != null) filled++;
-    if (_cityCtrl.text.isNotEmpty) filled++;
-    if (_countryCtrl.text.isNotEmpty) filled++;
-    if (_selectedInterests.length >= 3) filled++;
-    if (_firstNameCtrl.text.trim().isNotEmpty) filled++;
-    if (_lastNameCtrl.text.trim().isNotEmpty) filled++;
-    return ((filled / total) * 100).round().clamp(0, 100);
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.backgroundDark : const Color(0xFFF8F5FA);
+    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final cardBg = isDark ? AppColors.cardDark : Colors.white;
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: _buildAppBar(textColor),
+      body: Column(
+        children: [
+          // Progress indicator
+          _buildProgressIndicator(textColor, cardBg),
+          
+          // Tab bar
+          _buildTabBar(textColor),
+          
+          // Tab content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildBasicInfoTab(textColor, cardBg),
+                _buildLifestyleTab(textColor, cardBg),
+                _buildFaithTab(textColor, cardBg),
+              ],
+            ),
+          ),
+          
+          // Save button
+          _buildSaveButton(textColor),
+        ],
+      ),
+    );
   }
 
-  String _completionTip() {
-    if (_bioCtrl.text.trim().isEmpty) return 'Add a bio to stand out';
-    if (_gender == null || _gender!.isEmpty) return 'Select your gender';
-    if (_dateOfBirth == null) return 'Add your date of birth';
-    if (_selectedInterests.length < 3) return 'Add at least 3 interests';
-    if (_cityCtrl.text.isEmpty) return 'Add your city';
-    if (_jobTitleCtrl.text.isEmpty) return 'Add your job title';
-    return 'Your profile is looking great!';
+  PreferredSizeWidget _buildAppBar(Color textColor) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        onPressed: () => Get.back(),
+        icon: Icon(LucideIcons.chevronLeft, color: textColor),
+      ),
+      title: Text(
+        'Edit Profile',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : _saveProfile,
+          child: _isSaving
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                )
+              : Text(
+                  'Save',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 
-  Map<String, dynamic> _collectData() {
-    return {
-      if (_firstNameCtrl.text.trim().isNotEmpty) 'firstName': _firstNameCtrl.text.trim(),
-      if (_lastNameCtrl.text.trim().isNotEmpty) 'lastName': _lastNameCtrl.text.trim(),
-      if (_bioCtrl.text.trim().isNotEmpty) 'bio': _bioCtrl.text.trim(),
-      if (_gender != null) 'gender': _gender,
-      if (_maritalStatus != null) 'maritalStatus': _maritalStatus,
-      if (_heightCtrl.text.isNotEmpty) 'height': int.tryParse(_heightCtrl.text),
-      if (_jobTitleCtrl.text.isNotEmpty) 'jobTitle': _jobTitleCtrl.text.trim(),
-      if (_companyCtrl.text.isNotEmpty) 'company': _companyCtrl.text.trim(),
-      if (_education != null) 'education': _education,
-      if (_sect != null) 'sect': _sect,
-      if (_religiousLevel != null) 'religiousLevel': _religiousLevel,
-      if (_prayerFrequency != null) 'prayerFrequency': _prayerFrequency,
-      if (_dateOfBirth != null) 'dateOfBirth': _dateOfBirth!.toIso8601String().split('T')[0],
-      if (_cityCtrl.text.isNotEmpty) 'city': _cityCtrl.text.trim(),
-      if (_countryCtrl.text.isNotEmpty) 'country': _countryCtrl.text.trim(),
-      'interests': _selectedInterests,
-    };
+  Widget _buildProgressIndicator(Color textColor, Color cardBg) {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Profile Completion',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+              Text(
+                '$_completionPercentage%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: textColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: _completionPercentage / 100,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    final success = await controller.updateProfile(_collectData());
-    if (mounted) {
-      setState(() => _saving = false);
-      if (success) {
-        Get.back();
-      }
+  Widget _buildTabBar(Color textColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: textColor.withValues(alpha: 0.7),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        tabs: const [
+          Tab(text: 'Basic Info'),
+          Tab(text: 'Lifestyle'),
+          Tab(text: 'Faith'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoTab(Color textColor, Color cardBg) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _SectionCard(
+            title: 'Personal Information',
+            icon: LucideIcons.user,
+            children: [
+              _buildTextField(
+                controller: _firstNameCtrl,
+                label: 'First Name',
+                hint: 'Enter your first name',
+                onChanged: _calculateCompletion,
+              ),
+              _buildTextField(
+                controller: _lastNameCtrl,
+                label: 'Last Name',
+                hint: 'Enter your last name',
+                onChanged: _calculateCompletion,
+              ),
+              _buildDateField(),
+              _buildDropdownField(
+                value: _gender,
+                label: 'Gender',
+                hint: 'Select gender',
+                items: ['male', 'female'],
+                onChanged: (value) {
+                  setState(() => _gender = value);
+                  _calculateCompletion();
+                },
+              ),
+              _buildTextField(
+                controller: _phoneCtrl,
+                label: 'Phone',
+                hint: 'Enter phone number',
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          _SectionCard(
+            title: 'About You',
+            icon: LucideIcons.fileText,
+            children: [
+              _buildTextAreaField(
+                controller: _bioCtrl,
+                label: 'Bio',
+                hint: 'Tell us about yourself...',
+                maxLines: 4,
+                onChanged: _calculateCompletion,
+              ),
+              _buildInterestSelector(),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          _SectionCard(
+            title: 'Professional',
+            icon: LucideIcons.briefcase,
+            children: [
+              _buildTextField(
+                controller: _jobTitleCtrl,
+                label: 'Job Title',
+                hint: 'Enter your job title',
+                onChanged: _calculateCompletion,
+              ),
+              _buildTextField(
+                controller: _companyCtrl,
+                label: 'Company',
+                hint: 'Enter company name',
+              ),
+              _buildDropdownField(
+                value: _education,
+                label: 'Education',
+                hint: 'Select education level',
+                items: ['high_school', 'bachelors', 'masters', 'phd'],
+                onChanged: (value) {
+                  setState(() => _education = value);
+                  _calculateCompletion();
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLifestyleTab(Color textColor, Color cardBg) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _SectionCard(
+            title: 'Location',
+            icon: LucideIcons.mapPin,
+            children: [
+              _buildTextField(
+                controller: _cityCtrl,
+                label: 'City',
+                hint: 'Enter your city',
+                onChanged: _calculateCompletion,
+              ),
+              _buildTextField(
+                controller: _countryCtrl,
+                label: 'Country',
+                hint: 'Enter your country',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          _SectionCard(
+            title: 'Physical',
+            icon: LucideIcons.user,
+            children: [
+              _buildTextField(
+                controller: _heightCtrl,
+                label: 'Height (cm)',
+                hint: 'Enter height',
+                keyboardType: TextInputType.number,
+                onChanged: _calculateCompletion,
+              ),
+              _buildDropdownField(
+                value: _maritalStatus,
+                label: 'Marital Status',
+                hint: 'Select marital status',
+                items: ['never_married', 'divorced', 'widowed', 'married'],
+                onChanged: (value) {
+                  setState(() => _maritalStatus = value);
+                  _calculateCompletion();
+                },
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          _SectionCard(
+            title: 'Habits',
+            icon: LucideIcons.heart,
+            children: [
+              _buildDropdownField(
+                value: _dietary,
+                label: 'Dietary Preferences',
+                hint: 'Select dietary preference',
+                items: ['halal', 'mostly_halal', 'sometimes_halal', 'non_halal'],
+                onChanged: (value) {
+                  setState(() => _dietary = value);
+                  _calculateCompletion();
+                },
+              ),
+              _buildDropdownField(
+                value: _alcohol,
+                label: 'Alcohol',
+                hint: 'Select alcohol preference',
+                items: ['never', 'rarely', 'occasionally', 'frequently'],
+                onChanged: (value) {
+                  setState(() => _alcohol = value);
+                  _calculateCompletion();
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFaithTab(Color textColor, Color cardBg) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _SectionCard(
+            title: 'Religious Information',
+            icon: LucideIcons.moon,
+            children: [
+              _buildDropdownField(
+                value: _religiousLevel,
+                label: 'Religious Level',
+                hint: 'How religious are you?',
+                items: ['very_practicing', 'practicing', 'moderate', 'liberal'],
+                onChanged: (value) {
+                  setState(() => _religiousLevel = value);
+                  _calculateCompletion();
+                },
+              ),
+              _buildDropdownField(
+                value: _prayerFrequency,
+                label: 'Prayer Frequency',
+                hint: 'How often do you pray?',
+                items: ['actively_practicing', 'occasionally', 'not_practicing'],
+                onChanged: (value) {
+                  setState(() => _prayerFrequency = value);
+                  _calculateCompletion();
+                },
+              ),
+              _buildDropdownField(
+                value: _sect,
+                label: 'Sect',
+                hint: 'Select your sect',
+                items: ['sunni', 'shia', 'other'],
+                onChanged: (value) {
+                  setState(() => _sect = value);
+                  _calculateCompletion();
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(Color textColor) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: _isSaving
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Saving...'),
+                ],
+              )
+            : const Text(
+                'Save Profile',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final profileData = {
+        'bio': _bioCtrl.text.trim(),
+        'gender': _gender,
+        'dateOfBirth': _dateOfBirth?.toIso8601String(),
+        'maritalStatus': _maritalStatus,
+        'education': _education,
+        'jobTitle': _jobTitleCtrl.text.trim(),
+        'company': _companyCtrl.text.trim(),
+        'city': _cityCtrl.text.trim(),
+        'country': _countryCtrl.text.trim(),
+        'height': int.tryParse(_heightCtrl.text),
+        'religiousLevel': _religiousLevel,
+        'prayerFrequency': _prayerFrequency,
+        'sect': _sect,
+        'dietary': _dietary,
+        'alcohol': _alcohol,
+        'interests': _selectedInterests,
+      };
+
+      final userData = {
+        'firstName': _firstNameCtrl.text.trim(),
+        'lastName': _lastNameCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+      };
+
+      // Update profile
+      await controller.updateProfile({...userData, ...profileData});
+      
+      Get.back();
+      Helpers.showSnackbar(message: 'Profile updated successfully!');
+    } catch (e) {
+      debugPrint('[EditProfile] Error saving: $e');
+      Helpers.showSnackbar(message: 'Failed to save profile', isError: true);
+    } finally {
+      setState(() => _isSaving = false);
     }
   }
+
+  // Helper widgets
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+    VoidCallback? onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            onChanged: (_) => onChanged?.call(),
+            decoration: InputDecoration(
+              hintText: hint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextAreaField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required int maxLines,
+    VoidCallback? onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            maxLines: maxLines,
+            onChanged: (_) => onChanged?.call(),
+            decoration: InputDecoration(
+              hintText: hint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String? value,
+    required String label,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: value,
+            hint: Text(hint),
+            items: items.map((item) {
+              return DropdownMenuItem(
+                value: item,
+                child: Text(StringExtension(item.replaceAll('_', ' ')).capitalizeFirst),
+              );
+            }).toList(),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).inputDecorationTheme.fillColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Date of Birth',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _selectDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).inputDecorationTheme.fillColor,
+              ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.calendar, color: Theme.of(context).iconTheme.color),
+                  const SizedBox(width: 12),
+                  Text(
+                    _dateOfBirth != null
+                        ? Helpers.formatDate(_dateOfBirth!)
+                        : 'Select date of birth',
+                    style: TextStyle(
+                      color: _dateOfBirth != null
+                          ? Theme.of(context).textTheme.bodyMedium?.color
+                          : Theme.of(context).hintColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(LucideIcons.chevronDown, color: Theme.of(context).iconTheme.color),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInterestSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Interests',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).textTheme.titleMedium?.color,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _interests.map((interest) {
+            final isSelected = _selectedInterests.contains(interest);
+            return FilterChip(
+              label: Text(interest),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    _selectedInterests.add(interest);
+                  } else {
+                    _selectedInterests.remove(interest);
+                  }
+                  _calculateCompletion();
+                });
+              },
+              backgroundColor: Theme.of(context).chipTheme.backgroundColor,
+              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+              labelStyle: TextStyle(
+                color: isSelected ? AppColors.primary : Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _selectDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ?? DateTime.now().subtract(const Duration(days: 365 * 25)),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 80)),
+      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+    );
+    
+    if (date != null) {
+      setState(() {
+        _dateOfBirth = date;
+        _calculateCompletion();
+      });
+    }
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.backgroundDark : const Color(0xFFF8F5FA);
     final cardBg = isDark ? AppColors.cardDark : Colors.white;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final hintColor = isDark ? AppColors.textHintDark : AppColors.textHintLight;
-    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Top bar ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  _CircleBtn(
-                    icon: LucideIcons.chevronLeft,
-                    isDark: isDark,
-                    onTap: () => Get.back(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Edit Profile',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
-                    ),
-                  ),
-                  _saving
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                        )
-                      : GestureDetector(
-                          onTap: _save,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-                          ),
-                        ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Body ──
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                children: [
-                  // ── Completion Card ──
-                  _CompletionCard(completion: _calculateCompletion(), tip: _completionTip(), isDark: isDark),
-                  const SizedBox(height: 20),
-
-                  // ── About Me ──
-                  _SectionCard(
-                    title: 'About Me',
-                    icon: LucideIcons.sparkles,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _ModernField(label: 'First Name', controller: _firstNameCtrl, icon: LucideIcons.user, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                      _ModernField(label: 'Last Name', controller: _lastNameCtrl, icon: LucideIcons.user, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                      _ModernField(label: 'Bio', controller: _bioCtrl, icon: LucideIcons.alignLeft, isDark: isDark, borderColor: borderColor, hintColor: hintColor, maxLines: 3),
-                      _DateField(
-                        label: 'Date of Birth',
-                        value: _dateOfBirth,
-                        isDark: isDark,
-                        borderColor: borderColor,
-                        hintColor: hintColor,
-                        onPick: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: _dateOfBirth ?? DateTime(2000),
-                            firstDate: DateTime(1950),
-                            lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
-                          );
-                          if (d != null) setState(() => _dateOfBirth = d);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Personal Details ──
-                  _SectionCard(
-                    title: 'Personal Details',
-                    icon: LucideIcons.clipboardList,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _ChipSelector(
-                        label: 'Gender',
-                        options: const ['male', 'female'],
-                        displayLabels: const ['Male', 'Female'],
-                        selected: _gender,
-                        onSelect: (v) => setState(() => _gender = v),
-                        isDark: isDark,
-                      ),
-                      _ChipSelector(
-                        label: 'Marital Status',
-                        options: const ['single', 'divorced', 'widowed'],
-                        displayLabels: const ['Single', 'Divorced', 'Widowed'],
-                        selected: _maritalStatus,
-                        onSelect: (v) => setState(() => _maritalStatus = v),
-                        isDark: isDark,
-                      ),
-                      _ModernField(label: 'Height (cm)', controller: _heightCtrl, icon: LucideIcons.ruler, isDark: isDark, borderColor: borderColor, hintColor: hintColor, keyboard: TextInputType.number),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Career & Education ──
-                  _SectionCard(
-                    title: 'Career & Education',
-                    icon: LucideIcons.briefcase,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _ModernField(label: 'Job Title', controller: _jobTitleCtrl, icon: LucideIcons.briefcase, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                      _ModernField(label: 'Company', controller: _companyCtrl, icon: LucideIcons.building, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                      _ChipSelector(
-                        label: 'Education',
-                        options: const ['high_school', 'bachelors', 'masters', 'phd', 'other'],
-                        displayLabels: const ['High School', "Bachelor's", "Master's", 'PhD', 'Other'],
-                        selected: _education,
-                        onSelect: (v) => setState(() => _education = v),
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Faith & Religion ──
-                  _SectionCard(
-                    title: 'Faith & Religion',
-                    icon: LucideIcons.moon,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _ChipSelector(
-                        label: 'Sect',
-                        options: const ['sunni', 'shia', 'ibadi', 'other'],
-                        displayLabels: const ['Sunni', 'Shia', 'Ibadi', 'Other'],
-                        selected: _sect,
-                        onSelect: (v) => setState(() => _sect = v),
-                        isDark: isDark,
-                      ),
-                      _ChipSelector(
-                        label: 'Religious Level',
-                        options: const ['very_religious', 'religious', 'moderate', 'not_religious'],
-                        displayLabels: const ['Very Religious', 'Religious', 'Moderate', 'Not Religious'],
-                        selected: _religiousLevel,
-                        onSelect: (v) => setState(() => _religiousLevel = v),
-                        isDark: isDark,
-                      ),
-                      _ChipSelector(
-                        label: 'Prayer Frequency',
-                        options: const ['always', 'mostly', 'sometimes', 'rarely', 'never'],
-                        displayLabels: const ['Always', 'Mostly', 'Sometimes', 'Rarely', 'Never'],
-                        selected: _prayerFrequency,
-                        onSelect: (v) => setState(() => _prayerFrequency = v),
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Interests ──
-                  _SectionCard(
-                    title: 'Interests',
-                    icon: LucideIcons.heart,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _InterestsGrid(
-                        selected: _selectedInterests,
-                        isDark: isDark,
-                        onToggle: (i) {
-                          setState(() {
-                            if (_selectedInterests.contains(i)) {
-                              _selectedInterests.remove(i);
-                            } else {
-                              _selectedInterests.add(i);
-                            }
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Location ──
-                  _SectionCard(
-                    title: 'Location',
-                    icon: LucideIcons.mapPin,
-                    isDark: isDark,
-                    cardBg: cardBg,
-                    children: [
-                      _ModernField(label: 'City', controller: _cityCtrl, icon: LucideIcons.building, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                      _ModernField(label: 'Country', controller: _countryCtrl, icon: LucideIcons.globe, isDark: isDark, borderColor: borderColor, hintColor: hintColor),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── Save button ──
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _saving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                      ),
-                      child: _saving
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                          : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Section Card ──────────────────────────────────────────────────────────
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool isDark;
-  final Color cardBg;
-  final List<Widget> children;
-
-  const _SectionCard({required this.title, required this.icon, required this.isDark, required this.cardBg, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight, width: 0.5),
-        boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, offset: const Offset(0, 4))],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+              Icon(icon, color: AppColors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
                 ),
-                child: Icon(icon, size: 16, color: AppColors.primary),
               ),
-              const SizedBox(width: 10),
-              Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
             ],
           ),
           const SizedBox(height: 16),
@@ -419,262 +885,9 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ─── Modern Field ──────────────────────────────────────────────────────────
-class _ModernField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final IconData icon;
-  final bool isDark;
-  final Color borderColor;
-  final Color hintColor;
-  final int maxLines;
-  final TextInputType keyboard;
-
-  const _ModernField({required this.label, required this.controller, required this.icon, required this.isDark, required this.borderColor, required this.hintColor, this.maxLines = 1, this.keyboard = TextInputType.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboard,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(fontSize: 12, color: hintColor),
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          prefixIcon: Icon(icon, size: 18, color: AppColors.primary),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderColor)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Date Field ────────────────────────────────────────────────────────────
-class _DateField extends StatelessWidget {
-  final String label;
-  final DateTime? value;
-  final bool isDark;
-  final Color borderColor;
-  final Color hintColor;
-  final VoidCallback onPick;
-
-  const _DateField({required this.label, this.value, required this.isDark, required this.borderColor, required this.hintColor, required this.onPick});
-
-  @override
-  Widget build(BuildContext context) {
-    final display = value != null ? '${value!.day}/${value!.month}/${value!.year}' : 'Select date';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: onPick,
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            labelStyle: TextStyle(fontSize: 12, color: hintColor),
-            floatingLabelBehavior: FloatingLabelBehavior.always,
-            prefixIcon: const Icon(LucideIcons.calendar, size: 18, color: AppColors.primary),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderColor)),
-          ),
-          child: Text(
-            display,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: value != null
-                  ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                  : hintColor,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Chip Selector (replaces broken DropdownButtonFormField) ───────────────
-class _ChipSelector extends StatelessWidget {
-  final String label;
-  final List<String> options;
-  final List<String> displayLabels;
-  final String? selected;
-  final ValueChanged<String> onSelect;
-  final bool isDark;
-
-  const _ChipSelector({required this.label, required this.options, required this.displayLabels, this.selected, required this.onSelect, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: List.generate(options.length, (i) {
-              final isActive = selected == options[i];
-              return GestureDetector(
-                onTap: () => onSelect(options[i]),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isActive ? AppColors.primary : (isDark ? AppColors.surfaceDark : AppColors.dividerLight),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: isActive ? AppColors.primary : Colors.transparent),
-                  ),
-                  child: Text(
-                    displayLabels[i],
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Completion Card ───────────────────────────────────────────────────────
-class _CompletionCard extends StatelessWidget {
-  final int completion;
-  final String tip;
-  final bool isDark;
-  const _CompletionCard({required this.completion, required this.tip, required this.isDark});
-
-  Color get _color {
-    if (completion >= 80) return const Color(0xFF2ECC71);
-    if (completion >= 50) return const Color(0xFFF39C12);
-    return const Color(0xFFE74C3C);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.primaryLight.withValues(alpha: 0.04)]),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 52, height: 52,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: completion / 100),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutCubic,
-              builder: (context, val, child) {
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(value: val, strokeWidth: 5, backgroundColor: isDark ? AppColors.borderDark : Colors.grey.shade200, valueColor: AlwaysStoppedAnimation(_color)),
-                    Text('$completion%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _color)),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Profile Completion', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
-                const SizedBox(height: 3),
-                Text(tip, style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Interests Grid ────────────────────────────────────────────────────────
-class _InterestsGrid extends StatelessWidget {
-  final List<String> selected;
-  final bool isDark;
-  final ValueChanged<String> onToggle;
-  const _InterestsGrid({required this.selected, required this.isDark, required this.onToggle});
-
-  static const _all = [
-    'Travel', 'Reading', 'Cooking', 'Fitness', 'Photography', 'Music',
-    'Movies', 'Art', 'Gaming', 'Hiking', 'Swimming', 'Yoga', 'Fashion',
-    'Technology', 'Writing', 'Dancing', 'Volunteering', 'Sports',
-    'Coffee', 'Nature', 'Pets', 'Cars', 'Gardening', 'DIY',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Select at least 3', style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _all.map((interest) {
-            final active = selected.contains(interest);
-            return GestureDetector(
-              onTap: () => onToggle(interest),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.primary.withValues(alpha: 0.12) : (isDark ? AppColors.surfaceDark : AppColors.dividerLight),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: active ? AppColors.primary : Colors.transparent, width: 1.5),
-                ),
-                child: Text(interest, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: active ? AppColors.primary : null)),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Circle Button ─────────────────────────────────────────────────────────
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final bool isDark;
-  final VoidCallback onTap;
-  const _CircleBtn({required this.icon, required this.isDark, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40, height: 40,
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-        ),
-        child: Icon(icon, size: 18, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-      ),
-    );
+extension StringExtension on String {
+  String get capitalizeFirst {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
   }
 }

@@ -12,7 +12,7 @@ class HelpSupportScreen extends StatelessWidget {
 
   Future<void> _launch(String url, [String? title]) async {
     if (url.startsWith('http') && !url.contains('play.google.com')) {
-      Get.to(() => methna_app.StaticContentScreen(title: title ?? 'Content'));
+      Get.to(() => methna_app.StaticContentScreen(title: title ?? 'Content', contentType: 'general'));
     } else {
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
